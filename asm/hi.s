@@ -1,0 +1,38 @@
+LC r0 0xf100
+
+LC r1 'H'
+LL r4 1_E
+JMP PRINT
+1_E:
+
+
+LC r1 'I'
+LL r4 2_E
+JMP PRINT
+2_E:
+
+
+LC r1 '!'
+LL r4 3_E
+JMP PRINT
+3_E:
+
+
+LC r1 10
+LL r4 4_E
+JMP PRINT
+4_E:
+NOP
+NOP
+
+HALT 
+
+PRINT:
+STORE r1 r0 0
+LOAD r2 r0 1
+NOT r2 r2
+STORE r2 r0 1
+ADD pc r4 zx
+HALT
+
+0
