@@ -12,8 +12,8 @@ module our(
 
    output reg halt_out,
 
-   output reg[7:0] par_output_port,
-   output reg par_output_signal
+   output reg serial_output_port,
+   input reg serial_input_port
 ); 
    state_t state;
    state_t prev_state;
@@ -25,7 +25,7 @@ module our(
    reg[15:0] instruction;
    reg[95:0] reg_file;
 
-   reg should_halt;
+   reg keep_running;
 
    reg inst_res_from_ram;
    reg[2:0] inst_res_target;
@@ -34,7 +34,7 @@ module our(
    reg[15:0] res;
    
    reg[15:0] inst_ram_addr,  inst_ram_write, ram_read_sw;
-   reg[2:0] inst_ram_mode;
+   reg[3:0] inst_ram_mode;
    reg inst_ram_op;
 
 
@@ -52,8 +52,6 @@ module our(
       .pc(pc),
       .reg_file(reg_file),
       
-      .should_halt(should_halt),
-
       .res_from_ram(inst_res_from_ram),
       .res_target(inst_res_target),
       .res(inst_res),
@@ -78,8 +76,10 @@ module our(
       .phy_ram_op(phy_ram_op),
       .phy_ram_read(phy_ram_read),
 
-      .par_output_port(par_output_port),
-      .par_output_signal(par_output_signal)
+      .serial_output_port(serial_output_port),
+      .serial_input_port(serial_input_port),
+
+      .keep_running(keep_running)
    );
 
    initial begin
@@ -93,12 +93,31 @@ module our(
    pc = ~0; // Next_pc will be equal 0
    instruction = 0;
    reg_file = 0;
+
+   keep_running = 1;
    end
 
-   assign ram_read_sw = inst_ram_mode[0] ? {ram_read[7:0], ram_read[15:8]} : ram_read;
-   
-   assign res[15:8] = (inst_res_from_ram & ~inst_ram_mode[2])  ? ram_read_sw[15:8] : inst_res[15:8];
-   assign res[7:0] = (inst_res_from_ram & ~inst_ram_mode[1])  ? ram_read_sw[7:0] : inst_res[7:0];
+   assign ram_read_sw = inst_ram_mode[1] ? {ram_read[7:0], ram_read[15:8]} : ram_read;
+   always @* begin
+      res = inst_res;
+      if(inst_res_from_ram) begin
+         if(inst_ram_mode[0]) begin
+            if(~inst_ram_mode[1]) 
+               res = inst_res + ram_read;
+            else
+               res = inst_res - ram_read;
+         end
+         else begin
+            if(inst_ram_mode[2]) 
+               res[15:8] = ram_read_sw[15:8];
+            
+            if(inst_ram_mode[3]) 
+               res[7:0] = ram_read_sw[7:0];
+            
+         end
+      end
+   end
+
 
    assign next_pc = (inst_res_target == 1) ? res : (pc + 1);
 
@@ -110,12 +129,11 @@ module our(
 
       case(state)
          READ_INSTRUCTION: begin
-            
+            // $display("Read", next_pc);
             ram_addr <= next_pc; // Read instruction 
             pc <= next_pc; 
             ram_op <= 0;
             state <= STAGE_E;
-            //$display("READ INSTRUCTION %d %d", inst_res_target, res);
 
             case(inst_res_target)
                2: reg_file[95:80] <= res;
@@ -141,7 +159,7 @@ module our(
             ram_addr <= inst_ram_addr;
             ram_op <= inst_ram_op;
             ram_write <= inst_ram_write;
-            state <= should_halt ? HALT : READ_INSTRUCTION;
+            state <= keep_running ? READ_INSTRUCTION : HALT;
             
          end
          HALT: halt_out <= 1;

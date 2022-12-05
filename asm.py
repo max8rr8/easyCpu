@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import struct
 import sys
 
 
@@ -25,11 +26,11 @@ lines = list(map(lambda x: x.split('#', 1)[0], lines))
 registers = {
     'ZX': 0,
     'PC': 1,
-    'R0': 2,
-    'R1': 3,
-    'R2': 4,
-    'R3': 5,
-    'R4': 6,
+    'R2': 2,
+    'R3': 3,
+    'R4': 4,
+    'R5': 5,
+    'R6': 6,
     'IA': 7
 }
 
@@ -79,11 +80,11 @@ commands = {
     # LOAD r0 r1 2
     'LOAD':
     lambda flags, r0, r1, sh:
-    [cmd_enc(0b0010, flags, reg_enc(r0, 1), reg_enc(r1, 2), int_enc(sh, 2))],
+    [cmd_enc(0b0010, flags ^ 0b110, reg_enc(r0, 1), reg_enc(r1, 2), int_enc(sh, 2))],
     # STORE r0 PC 0x2
     'STORE':
     lambda flags, r0, r1, sh:
-    [cmd_enc(0b0011, flags, reg_enc(r0, 1), reg_enc(r1, 2), int_enc(sh, 2))],
+    [cmd_enc(0b0011, flags ^ 0b110, reg_enc(r0, 1), reg_enc(r1, 2), int_enc(sh, 2))],
     # LOAD r0 r1 2
     'BRANCH':
     lambda flags, r0, sh:
@@ -235,9 +236,13 @@ while should_recompile:
         print("Unknown command", line_number + 1)
 
 # print(list(lines))
-
-# res = ""
 print("Total length:", len(compiled))
 print(', '.join([hex(a & 0xffff) for a in compiled]))
+
+with open("./ram.bin", "wb") as f:
+  to_write = [a & 0xffff for a in compiled]
+  to_write = struct.pack("!" + "H" * len(to_write), *to_write)
+  f.write(to_write)
+# res = ""
 # for c in compiled:
 #   print(hex(c))

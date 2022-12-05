@@ -1,0 +1,11 @@
+BRANCH.0b111 zx +2
+12
+LOAD r2 pc -1
+STORE r2 pc +2
+BRANCH.0b111 zx +3
+0
+
+14
+LOAD.0b111 r2 pc -1
+STORE r2 pc +2
+HALT

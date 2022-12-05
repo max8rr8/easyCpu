@@ -3,8 +3,6 @@ module inst(
   input[15:0] pc,
   input[95:0] reg_file,
 
-  output reg should_halt,
-
   output reg[15:0] res,
   output reg res_from_ram,
   output reg[2:0] res_target,
@@ -12,7 +10,7 @@ module inst(
   output reg[15:0] ram_addr,
   output reg ram_op,
   output reg[15:0] ram_write,
-  output reg[2:0] ram_mode
+  output reg[3:0] ram_mode
 );
   // reg[15:0] x;
   // reg[15:0] y;
@@ -49,12 +47,6 @@ module inst(
 
     .res(arg_reg3)
   ); 
-
-
-  wire _unused_ok = &{1'b0,
-                    instruction,
-                    arg_reg1,
-                    1'b0};
   
   assign alu_x = instruction[11] ? ~arg_reg2 : arg_reg2;
   assign alu_y = instruction[10] ? ~arg_reg3 : arg_reg3;
@@ -75,8 +67,15 @@ module inst(
 
       'b0100,          // AND
       'b0101: begin    // ADD
-        res = instruction[12] ? (alu_x + alu_y) : (alu_x & alu_y);
-        res = instruction[9] ? ~res : res;
+        // if instruction[11] && !instruction[
+        if(instruction[11:9] == 3'b100) begin // Override useless instructions
+          res = instruction[12] ? (arg_reg2 ^ arg_reg3) : (arg_reg2 >> 1);
+          // $display("Override instructions ", instruction[12], " ", arg_reg2,  " " , arg_reg2 >> 1, " ", res);
+        end
+        else begin 
+          res = instruction[12] ? (alu_x + alu_y) : (alu_x & alu_y);
+          res = instruction[9] ? ~res : res;
+        end
         res_target = dst_reg;
       end
 
@@ -87,7 +86,7 @@ module inst(
         
         ram_addr = arg_reg2 + shift;
         ram_write = arg_reg1;
-        ram_mode = instruction[11:9];
+        ram_mode = {instruction[11:9], instruction[11:10] == 'b00};
 
         ram_op = instruction[12];
         res = arg_reg1;
@@ -110,18 +109,16 @@ module inst(
         should_branch |= cond_eq & instruction[11];
         should_branch |= cond_gt & instruction[10];
         should_branch |= cond_lt & instruction[9];
-        //$display("BRANCH", should_branch);
+        // $display("BRANCH ", pc, " ", instruction[15:12], " ", should_branch);
         if(should_branch) begin
+          // $display("Actual branch");
           res_target = 1;
           res = pc + shift;
         end
       end
-
-      'b1111: begin // HALT
-        should_halt = 1;
+      default: begin
+        // $display("Unknown command pc: ", pc, " ins: ", instruction);
       end
-
-      default: $display("Unknown command");
 
   endcase
 

@@ -1,113 +1,189 @@
+#include <arpa/inet.h>
+#include <sys/ioctl.h>
+#include <unistd.h>
+#include <stdlib.h>
+#include <stdio.h>
+#include <csignal>
+
 #include "Vour.h"
 #include "verilated.h"
-#include <iostream>   
 #include "instruction.h"
 
-// unsigned short RAM[1024] = {
-//   I_NOP  | 13, // Used for r0 load
-//   I_NOP  | 11, // Used for r1 load
+#define RAM_SIZE 65535
 
-//   I_LOAD | ARG_REG1(REG_R0) | ARG_REG2(REG_PC) | 0b100 | 0x2,         // LOAD r0, pc + 0x1    
-//   I_LOAD | ARG_REG1(REG_R1) | ARG_REG2(REG_PC) | 0b100 | 0x2,         // LOAD r0, pc + 0x1    
-//   I_LOAD | ARG_REG1(REG_R2) | ARG_REG2(REG_PC) | 0x1,                 // LOAD r0, pc + 0x1  
+unsigned short RAM[RAM_SIZE + 1] = {0};
+bool should_stop = false;
 
-//   I_NOP | 0,
+void print_ram(int rows, int start)
+{
+  int cur_idx = 0;
 
-//   I_BRANCH | I_BRANCH_GT | I_BRANCH_LT | ARG_REG1(REG_R2) | 0x3,      // JNE AND_OP
-//   I_ALU_ADD | ARG_REG1(REG_R0) | ARG_REG2(REG_R0) | ARG_REG3(REG_R1), // ADD r0, r0, r1
-//   I_BRANCH | I_BRANCH_ANY | 0x2,                                      // JMP END_IF
-  
-//   // AND_OP:-
-//   I_ALU_AND | ARG_REG1(REG_R0) | ARG_REG2(REG_R0) | ARG_REG3(REG_R1), // ADD r0, r0, r1
-  
-//   // END_IF:
-//   I_STORE | ARG_REG1(REG_R0) | ARG_REG2(REG_PC) | 0x2,                // STORE r0, pc + 0x2
-  
-//   I_CTR_HALT
-// };
+  for (int i = 0; i < rows; i++)
+  {
+    printf("%04x %04x %04x %04x\n", RAM[start + cur_idx], RAM[start + cur_idx + 1], RAM[start + cur_idx + 2], RAM[start + cur_idx + 3]);
+    cur_idx += 4;
+  }
+}
 
+void signal_handler(int signal_num)
+{
+  printf("Recieved int, halting\n");
+      should_stop = true;
+}
 
-// unsigned short RAM[1024] = {
-//   I_NOP  | 13, // Used for r0 load
-//   I_NOP  | 11, // Used for r1 load
+int main(int argc, char **argv, char **env)
+{
+  printf("Loding initial RAM from ram.bin:\n");
+  FILE *f = fopen("./ram.bin", "rb");
+  fread(RAM, sizeof(unsigned short), RAM_SIZE, f);
+  for (int i = 0; i < RAM_SIZE; i++)
+    RAM[i] = ntohs(RAM[i]);
+  fclose(f);
 
-//   I_LOAD | ARG_REG1(REG_R0) | ARG_REG2(REG_PC) | 0b100 | 0x2,         // LOAD r0, pc + 0x1    
-//   I_LOAD | ARG_REG1(REG_R1) | ARG_REG2(REG_PC) | 0b100 | 0x2,         // LOAD r0, pc + 0x1    
-//   I_ALU_ADD | ARG_REG1(REG_R0) | ARG_REG2(REG_R0) | ARG_REG3(REG_R1), // ADD r0, r0, r1
-//   // END_IF:
-//   I_STORE | ARG_REG1(REG_R0) | ARG_REG2(REG_PC) | 0x2,                // STORE r0, pc + 0x2
-  
-//   I_CTR_HALT
-// };
+  signal(SIGINT, signal_handler);
 
+  print_ram(4, 0);
 
-unsigned short RAM[1024] = {
-  
-  0xeff, 0x208d, 0x4690, 0x11, 0x20cd, 0x54d8, 0x18cb, 0x1b, 0x21cd, 0x5139, 0x5b23, 0x2120, 0x3110, 0x2111, 0x4720, 0x3111, 0x1e2b, 0x0, 0xfe00, 0x0, 0x48, 0x65, 0x6c, 0x6c, 0x6f, 0x20, 0x57, 0x6f, 0x72, 0x6c, 0x64, 0x21, 0x21, 0x21, 0xa, 0x0
+  VerilatedContext *contextp = new VerilatedContext;
+  contextp->commandArgs(argc, argv);
+  Vour *top = new Vour{contextp};
 
-};
+  bool prev_par_signal = false;
+  printf("\nStarted cpu\n\n");
 
-int main(int argc, char** argv, char** env) {
+  unsigned short to_send = 0;
+  unsigned short left_to_send = 0;
+  unsigned short left_to_read = 0;
+  unsigned short serial_state = 0;
 
+  unsigned short inp_clock = 0;
+  bool prev_output = false;
+  unsigned short read_start = 0;
+  unsigned short cur_read = 0;
+  unsigned short read_bits_left = 8;
 
-    // for(int i = 0; i < 24; i++) {
+  while (!contextp->gotFinish())
+  {
+    top->eval();
+    top->clk = 1;
+    top->eval();
+    top->clk = 0;
 
-    //   printf("%d\n", RAM[i]);
-    //   // cur_idx += 4;
-    // }
-
-
-    VerilatedContext* contextp = new VerilatedContext;
-    contextp->commandArgs(argc, argv);
-    Vour* top = new Vour{contextp};
-    
-    bool prev_par_signal = false;
-    printf("STARTED \n\n");
-
-    while (!contextp->gotFinish()) { 
-      top->eval();
-      top->clk = 1;
-      top->eval();
-      top->clk = 0;
-
-      // printf("RAM: 0x%04x %s 0x%04x\n", top->ram_addr, top->ram_op ? "WRITE" : "READ ", top->ram_op ? top->ram_write : 0 );
-      auto ram_addr = top->phy_ram_addr;
-      if( ram_addr >= (sizeof(RAM) / sizeof(RAM[0]))) {
-        printf("Invalid RAM address\n");
-        break;
-      }
-
-      if(top->phy_ram_op) { // WRITE
-        RAM[ram_addr] = top->phy_ram_write;
-        //printf("RAM: 0x%04x WRITE 0x%04x\n", ram_addr, top->ram_write);
-      } else { // READ
-        top->phy_ram_read = RAM[ram_addr];
-        //printf("RAM: 0x%04x READ  0x%04x\n", ram_addr, RAM[ram_addr]);
-      }
-      
-      
-      if(top->halt_out) {
-        printf("\n\nHALT\n");
-        break;
-      }
-      if(top->par_output_signal != prev_par_signal) {
-        prev_par_signal = top->par_output_signal;
-        printf("%c", top->par_output_port);
-      }
-      // printf("%d %d\n", top->par_output_port, top->par_output_signal);
-      // std::cout << "RAM: " << (int)top->ram_op << std::endl;
+    // printf("RAM: 0x%04x %s 0x%04x\n", top->ram_addr, top->ram_op ? "WRITE" : "READ ", top->ram_op ? top->ram_write : 0 );
+    auto ram_addr = top->phy_ram_addr;
+    if (ram_addr >= (sizeof(RAM) / sizeof(RAM[0])))
+    {
+      printf("Invalid RAM address\n");
+      break;
     }
 
-    int cur_idx = 0;
-    for(int i = 0; i < 5; i++) {
+    if (top->phy_ram_op)
+    { // WRITE
+      RAM[ram_addr] = top->phy_ram_write;
+      // printf("RAM: 0x%04x WRITE 0x%04x\n", ram_addr, top->ram_write);
+    }
+    else
+    { // READ
+      top->phy_ram_read = RAM[ram_addr];
+      // printf("RAM: 0x%04x READ  0x%04x\n", ram_addr, RAM[ram_addr]);
+    }
 
-      printf("%d %d %d %d\n", RAM[cur_idx], RAM[cur_idx + 1], RAM[cur_idx + 2], (short)RAM[cur_idx + 3]);
-      cur_idx += 4;
+    if (top->halt_out)
+    {
+      printf("\nCpu HALTed\n\n");
+      break;
+    }
+    if (should_stop)
+    {
+      break;
     }
 
 
+    // SERIAL INPUT
+    if (left_to_read == 0)
+    {
+      int n;
+      if (ioctl(0, FIONREAD, &n) == 0 && n > 0)
+      {
+        left_to_read += n;
+      }
+    }
 
-    delete top;
-    delete contextp;
-    return 0;
+    if (serial_state == 12)
+    {
+      top->serial_input_port = 1;
+    }
+    if (serial_state == 7)
+    {
+      top->serial_input_port = (to_send & 1 << 7) != 0;
+    }
+    if (serial_state == 0)
+    {
+      if (left_to_send == 0)
+      {
+        if (left_to_read > 0)
+        {
+          left_to_read--;
+          to_send = getchar();
+          // printf("Sending %d\n", to_send);
+          left_to_send = 7;
+          serial_state = 16;
+        }
+        else
+        {
+          serial_state = 0;
+        }
+      }
+      else
+      {
+        to_send <<= 1;
+        left_to_send--;
+        serial_state = 16;
+      }
+      top->serial_input_port = 0;
+    }
+    if (serial_state > 0)
+      serial_state--;
+
+    // SERIAL OUTPUT
+    inp_clock = (inp_clock + 1) & 15;
+    if(prev_output != top->serial_output_port) {
+      if(top->serial_output_port == 1) { // Rising edge
+        read_start = inp_clock;
+      }else{
+        unsigned short passed = (inp_clock - read_start) & 0xf;
+        cur_read <<= 1;
+        read_bits_left--;
+
+        if(passed > 8) {
+          cur_read |= 1;
+        }
+
+        if(read_bits_left == 0) {
+          // printf("C: %d\n", cur_read);
+          printf("%c", cur_read);
+          fflush(stdout);
+          cur_read= 0;
+          read_bits_left = 8;
+
+        }
+        // printf("Change in heart %d %d\n", top->serial_output_port, );
+      }
+    }
+    prev_output = top->serial_output_port;
+
+    // printf("%d %d\n", top->par_output_port, top->par_output_signal);
+    // std::cout << "RAM: " << (int)top->ram_op << std::endl;
+    // usleep(100000);
+  }
+
+  printf("Program ram after HALT:\n");
+  print_ram(4, 0);
+
+  printf("\nStack after HALT:\n");
+  print_ram(8, 0x4000);
+
+  delete top;
+  delete contextp;
+  return 0;
 }
