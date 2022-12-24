@@ -13,6 +13,7 @@ fn compile_file(src: std::path::PathBuf, dst: std::path::PathBuf) -> Result<(), 
         fs::read_to_string(&src).map_err(|e| format!("Failed to read file {:#?}: {}", src, e))?;
 
     let program = parse_listing(contents.as_str());
+    let program = program.map_err(|x| format!("Failed to parse: {:#?}", x))?;
     
     let mut errors: Vec<(usize, CompileError)> = Vec::new();
     let mut parsed: Vec<Parsed> = Vec::new();

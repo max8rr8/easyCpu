@@ -8,7 +8,6 @@ pub enum CompileError {
     UnknownCommand(String),
     UnknownRegister(String),
     UnknownLabel(String),
-    InvalidNumber(String),
 
     ShiftIsTooBig(i8),
 
@@ -16,4 +15,9 @@ pub enum CompileError {
     
     TooManyAttempts,
     LabelRedefined(String),
+
+    UnexpectedEndOfFile,
+    UnknownToken(char),
+    InvalidNumber(String),
+
 }
