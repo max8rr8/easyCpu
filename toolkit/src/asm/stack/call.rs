@@ -37,12 +37,13 @@ impl Instruction for StackCallInstruction {
 
         while attempts_left > 0 {
             ins.clear();
-            cur_hashmap.insert(&retu_label_s, Some(cur_len));
+            cur_hashmap.insert((0xffff, &retu_label_s), Some(cur_len));
 
             ins.extend(
                 StackConstInstruction::new_label(retu_label.clone()).compile(&CompileContext {
                     current_pc: 0,
                     label_map: &cur_hashmap,
+                    scope_stack: &vec![0xffff as usize],
                 })?,
             );
 
@@ -51,6 +52,7 @@ impl Instruction for StackCallInstruction {
                     .compile(&CompileContext {
                         current_pc: ctx.current_pc + ins.len() as u16,
                         label_map: ctx.label_map,
+                        scope_stack: ctx.scope_stack
                     })?,
             );
 

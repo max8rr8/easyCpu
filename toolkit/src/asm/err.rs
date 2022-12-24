@@ -20,4 +20,6 @@ pub enum CompileError {
     UnknownToken(char),
     InvalidNumber(String),
 
+    UnmatchedClosingBracket
+
 }

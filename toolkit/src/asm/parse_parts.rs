@@ -10,11 +10,16 @@ pub struct ParsedLabel {
 
 impl ParsedLabel {
     pub fn resolve(&self, ctx: &CompileContext) -> Result<u16, CompileError> {
-        let label_pos = ctx
-            .label_map
-            .get(&self.label)
-            .ok_or_else(|| CompileError::UnknownLabel(self.label.clone()))?;
-        let label_pos = label_pos.unwrap_or(ctx.current_pc.wrapping_sub(16));
+        let mut label_pos: Option<Option<u16>> = None;
+        for scope in ctx.scope_stack.iter().rev() {
+            let pos = ctx.label_map.get(&(*scope, &self.label));
+            if let Some(pos) = pos {
+                label_pos = Some(*pos);
+                break;
+            }
+        }
+        let label_pos = label_pos.ok_or_else(|| CompileError::UnknownLabel(self.label.clone()))?;
+        let label_pos = label_pos.unwrap_or(ctx.current_pc.wrapping_sub(8));
         Ok(label_pos.wrapping_sub(ctx.current_pc))
     }
 }

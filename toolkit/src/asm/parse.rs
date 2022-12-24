@@ -20,6 +20,10 @@ use super::mem::{MemInstruction, MemOperation};
 pub enum Parsed {
     Instruction(Box<dyn Instruction>),
     Label(String),
+
+    EnterLocalScope(usize),
+    LeaveLocalScope,
+
     Nop,
 }
 
@@ -174,6 +178,8 @@ pub fn parse_listing<'a>(inp: &'a str) -> Result<Vec<ProgramLine>, CompileError>
     let mut parsed: Vec<ProgramLine> = Vec::new();
     let mut parser = ParseReader::from(inp.chars());
 
+    let mut current_scope: usize = 0;
+
     while parser.more {
         let mut cur = parser.front()?;
 
@@ -284,6 +290,17 @@ pub fn parse_listing<'a>(inp: &'a str) -> Result<Vec<ProgramLine>, CompileError>
                 line_number: parser.cur_line,
                 compiled: Ok(Parsed::Instruction(ins)),
             });
+        } else if cur == '{' || cur == '}' {
+            parsed.push(ProgramLine {
+                line_number: parser.cur_line,
+                compiled: if cur == '{' {
+                    current_scope += 1;
+                    Ok(Parsed::EnterLocalScope(current_scope))
+                } else {
+                    Ok(Parsed::LeaveLocalScope)
+                },
+            });
+            parser.pop();
         } else if end_checker(cur) | cur.is_whitespace() {
             // Handle empty lines and whitespaces
             parser.pop();

@@ -46,7 +46,8 @@ impl Instruction for StackJumpInstruction {
             cond_reg,
         ).compile(&CompileContext {
           current_pc: ctx.current_pc + ins.len() as u16,
-          label_map: ctx.label_map
+          label_map: ctx.label_map,
+          scope_stack: ctx.scope_stack
         })?);
        Ok(ins)
         

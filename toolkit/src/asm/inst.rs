@@ -6,7 +6,8 @@ use crate::asm::err::CompileError;
 
 pub struct CompileContext<'a> {
   pub current_pc: u16,
-  pub label_map: &'a HashMap<&'a String, Option<u16>>,
+  pub label_map: &'a HashMap<(usize, &'a String), Option<u16>>,
+  pub scope_stack: &'a Vec<usize>
 }
 
 pub trait Instruction: fmt::Debug {
