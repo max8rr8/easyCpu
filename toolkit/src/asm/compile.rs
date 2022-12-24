@@ -79,13 +79,11 @@ pub fn compile(parsed: Vec<Parsed>) -> Result<Vec<u16>, CompileError> {
                 Parsed::EnterLocalScope(id) => {
                     scope_stack.push(*id);
                     cur_scope = *id;
-                    dbg!("Entering local scope", id);
                 }
 
                 Parsed::LeaveLocalScope => {
                     scope_stack.pop();
                     cur_scope = *scope_stack.last().unwrap_or(&0);
-                    dbg!("Leaving local scope");
                 }
             };
         }

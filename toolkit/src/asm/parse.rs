@@ -159,6 +159,26 @@ impl<'a> ParseReader<'a> {
             }
         }
     }
+
+    fn read_until(&mut self, until: fn(char, char) -> bool) -> Result<Vec<char>, CompileError> {
+        let mut collected: Vec<char> = Vec::new();
+        let mut prev: char = '\0';
+
+        while self.more {
+            let cur = self.front()?;
+
+            if until(cur, prev) {
+                break;
+            }
+
+            prev = cur;
+
+            collected.push(cur);
+            self.pop();
+        }
+
+        return Ok(collected);
+    }
 }
 
 impl<'a> From<Chars<'a>> for ParseReader<'a> {
@@ -186,55 +206,25 @@ pub fn parse_listing<'a>(inp: &'a str) -> Result<Vec<ProgramLine>, CompileError>
         if letter_checker(cur) {
             // Handle instructions and labels
 
-            let mut collected: Vec<char> = Vec::new();
-            while parser.more {
-                cur = parser.front()?;
-
-                if end_checker(cur) || cur == ':' {
-                    break;
-                }
-
-                collected.push(cur);
-                parser.pop();
-            }
-            let is_label = cur == ':';
-            if is_label {
-                parser.pop();
-            }
-
+            let collected: Vec<char> =
+                parser.read_until(|cur, prev| prev == ':' || end_checker(cur))?;
             let collected: String = collected.into_iter().collect();
+
             parsed.push(ProgramLine {
                 line_number: parser.cur_line,
-                compiled: if is_label {
-                    Ok(Parsed::Label(collected))
+                compiled: if let Some(pure_label) = collected.strip_suffix(':') {
+                    Ok(Parsed::Label(String::from(pure_label)))
                 } else {
                     parse_instruction(collected)
                 },
             });
         } else if cur == '#' {
             // Handle Comments
-
-            while parser.more {
-                cur = parser.front()?;
-                if cur == '\n' {
-                    break;
-                }
-                parser.pop();
-            }
+            parser.read_until(|cur, _| cur == '\n')?;
         } else if nummeric_checker(cur) {
             // Handle numbers
-
-            let mut collected: Vec<char> = Vec::new();
-
-            while parser.more {
-                cur = parser.front()?;
-
-                if end_checker(cur) || cur.is_whitespace() {
-                    break;
-                }
-                collected.push(cur);
-                parser.pop();
-            }
+            let collected: Vec<char> =
+                parser.read_until(|cur, _| cur.is_whitespace() || end_checker(cur))?;
 
             let collected: String = collected.into_iter().collect();
             let compiled =

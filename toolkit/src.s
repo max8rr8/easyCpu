@@ -276,7 +276,6 @@ XOR_OPERATION:
 
 
 
-
 INCORRECT_NUMBER:
 "Incorrect number"
 0xa
