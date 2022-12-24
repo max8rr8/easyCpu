@@ -15,4 +15,5 @@ pub enum CompileError {
     InvalidInstruction(cpu::InstructionError),
     
     TooManyAttempts,
+    LabelRedefined(String),
 }

@@ -6,16 +6,17 @@ use super::{err::CompileError, parse::Parsed};
 
 pub fn compile(parsed: Vec<Parsed>) -> Result<Vec<u16>, CompileError> {
     let mut labels: HashMap<&String, Option<u16>> = HashMap::new();
-    // labels.insert(, v) = Some(1);
-    parsed
-        .iter()
-        .filter_map(|x| match x {
-            Parsed::Label(label) => Some(label),
-            _ => None,
-        })
-        .for_each(|x| {
-            labels.insert(x, None);
-        });
+
+    for p in parsed.iter() {
+        if let Parsed::Label(label) = p {
+            if labels.contains_key(label) {
+                return Err(CompileError::LabelRedefined(label.clone()));
+            } else {
+                labels.insert(label, None);
+            }
+        }
+    }
+
 
     let mut compiled: Vec<u16> = Vec::new();
     let mut attempts_left = 1024;
