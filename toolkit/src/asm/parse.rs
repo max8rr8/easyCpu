@@ -121,13 +121,13 @@ fn letter_checker(s: char) -> bool {
 
 fn end_checker(s: char) -> bool {
     match s {
-        ';' | '#' | '\n' => true,
+        ';' | '#' | '\n' | '(' => true,
         _ => false,
     }
 }
 
 struct ParseReader<'a> {
-    inp: Chars<'a>,
+    inp: &'a mut dyn Iterator<Item = char>,
     more: bool,
     cur_char: char,
     cur_line: usize,
@@ -179,131 +179,175 @@ impl<'a> ParseReader<'a> {
 
         return Ok(collected);
     }
+
+    fn parse(mut self) -> Result<Vec<ProgramLine>, CompileError> {
+        let mut parsed: Vec<ProgramLine> = Vec::new();
+
+        let mut current_scope: usize = 0;
+    
+        while self.more {
+            let mut cur = self.front()?;
+    
+            if letter_checker(cur) {
+                // Handle instructions and labels
+    
+                let collected: Vec<char> =
+                    self.read_until(|cur, prev| prev == ':' || end_checker(cur))?;
+                let collected: String = collected.into_iter().collect();
+    
+                parsed.push(ProgramLine {
+                    line_number: self.cur_line,
+                    compiled: if let Some(pure_label) = collected.strip_suffix(':') {
+                        Ok(Parsed::Label(String::from(pure_label)))
+                    } else {
+                        parse_instruction(collected)
+                    },
+                });
+            } else if cur == '#' {
+                // Handle Comments
+                self.read_until(|cur, _| cur == '\n')?;
+            } else if nummeric_checker(cur) {
+                // Handle numbers
+                let collected: Vec<char> =
+                    self.read_until(|cur, _| cur.is_whitespace() || end_checker(cur))?;
+    
+                let collected: String = collected.into_iter().collect();
+                let compiled =
+                    parse_parts::parse_u16_constant(collected.to_uppercase().as_str()).map(|val| {
+                        let ins = Box::new(CustomInstruction::new(val));
+                        Parsed::Instruction(ins)
+                    });
+    
+                parsed.push(ProgramLine {
+                    line_number: self.cur_line,
+                    compiled,
+                });
+            } else if cur == '"' {
+                // Handle strings
+    
+                let mut collected: Vec<u16> = Vec::new();
+                let mut is_special = false;
+    
+                self.pop();
+                while self.more {
+                    cur = self.front()?;
+    
+                    if is_special {
+                        cur = match cur {
+                            'n' => '\n',
+                            't' => '\t',
+                            '0' => '\0',
+                            _ => cur,
+                        };
+    
+                        is_special = false;
+                    } else {
+                        if cur == '\\' {
+                            is_special = true;
+                        } else if cur == '"' {
+                            self.pop();
+                            break;
+                        }
+                    }
+    
+                    if !is_special {
+                        let mut bu: [u8; 1] = [0];
+                        cur.encode_utf8(&mut bu);
+                        collected.push(bu[0] as u16);
+                    }
+    
+                    self.pop();
+                }
+    
+                let ins = Box::new(CustomMultiInstruction::new(collected));
+    
+                parsed.push(ProgramLine {
+                    line_number: self.cur_line,
+                    compiled: Ok(Parsed::Instruction(ins)),
+                });
+            } else if cur == '{' || cur == '}' {
+                parsed.push(ProgramLine {
+                    line_number: self.cur_line,
+                    compiled: if cur == '{' {
+                        current_scope += 1;
+                        Ok(Parsed::EnterLocalScope(current_scope))
+                    } else {
+                        Ok(Parsed::LeaveLocalScope)
+                    },
+                });
+                self.pop();
+            } else if cur == '(' {
+                let start_line = self.cur_line;
+                let last_el = parsed.pop();
+                
+                let mut combined: Vec<char> = Vec::new();
+                let mut cur_level = 0;
+
+                self.pop();
+                while self.more {
+                    cur = self.front()?;
+                    if cur == '(' {
+                        cur_level += 1;
+                    } else if cur == ')' {
+                        cur_level -= 1;
+                    }
+                    self.pop();
+
+                    if cur_level < 0 {
+                        break;
+                    }
+                    combined.push(cur);
+                }
+
+                let mut combined = combined.into_iter();
+                let mut subparser = ParseReader {
+                    inp: &mut combined,
+                    more: true,
+                    cur_char: '\0',
+                    cur_line: start_line,
+                };
+
+                subparser.pop();
+                let mut subparsed = subparser.parse()?;
+                parsed.append(&mut subparsed);
+
+                if let Some(last_el) = last_el {
+                    parsed.push(last_el);
+                }
+
+            } else if end_checker(cur) | cur.is_whitespace() {
+                // Handle empty lines and whitespaces
+                self.pop();
+            } else {
+                // Handle numbers
+    
+                self.pop();
+                parsed.push(ProgramLine {
+                    line_number: self.cur_line,
+                    compiled: Err(CompileError::UnknownToken(cur)),
+                });
+            }
+        }
+    
+        Ok(parsed)
+    }
 }
 
-impl<'a> From<Chars<'a>> for ParseReader<'a> {
-    fn from(c: Chars<'a>) -> Self {
+impl<'a> From<&'a mut Chars<'a>> for ParseReader<'a> {
+    fn from(c: &'a mut Chars<'a>) -> Self {
         let mut p: ParseReader = ParseReader {
             inp: c,
             more: true,
             cur_char: '\0',
             cur_line: 0,
         };
-        p.pop();
+        p.pop(); 
         p
     }
 }
 
 pub fn parse_listing<'a>(inp: &'a str) -> Result<Vec<ProgramLine>, CompileError> {
-    let mut parsed: Vec<ProgramLine> = Vec::new();
-    let mut parser = ParseReader::from(inp.chars());
-
-    let mut current_scope: usize = 0;
-
-    while parser.more {
-        let mut cur = parser.front()?;
-
-        if letter_checker(cur) {
-            // Handle instructions and labels
-
-            let collected: Vec<char> =
-                parser.read_until(|cur, prev| prev == ':' || end_checker(cur))?;
-            let collected: String = collected.into_iter().collect();
-
-            parsed.push(ProgramLine {
-                line_number: parser.cur_line,
-                compiled: if let Some(pure_label) = collected.strip_suffix(':') {
-                    Ok(Parsed::Label(String::from(pure_label)))
-                } else {
-                    parse_instruction(collected)
-                },
-            });
-        } else if cur == '#' {
-            // Handle Comments
-            parser.read_until(|cur, _| cur == '\n')?;
-        } else if nummeric_checker(cur) {
-            // Handle numbers
-            let collected: Vec<char> =
-                parser.read_until(|cur, _| cur.is_whitespace() || end_checker(cur))?;
-
-            let collected: String = collected.into_iter().collect();
-            let compiled =
-                parse_parts::parse_u16_constant(collected.to_uppercase().as_str()).map(|val| {
-                    let ins = Box::new(CustomInstruction::new(val));
-                    Parsed::Instruction(ins)
-                });
-
-            parsed.push(ProgramLine {
-                line_number: parser.cur_line,
-                compiled,
-            });
-        } else if cur == '"' {
-            // Handle strings
-
-            let mut collected: Vec<u16> = Vec::new();
-            let mut is_special = false;
-
-            parser.pop();
-            while parser.more {
-                cur = parser.front()?;
-
-                if is_special {
-                    cur = match cur {
-                        'n' => '\n',
-                        't' => '\t',
-                        '0' => '\0',
-                        _ => cur,
-                    };
-
-                    is_special = false;
-                } else {
-                    if cur == '\\' {
-                        is_special = true;
-                    } else if cur == '"' {
-                        parser.pop();
-                        break;
-                    }
-                }
-
-                if !is_special {
-                    let mut bu: [u8; 1] = [0];
-                    cur.encode_utf8(&mut bu);
-                    collected.push(bu[0] as u16);
-                }
-
-                parser.pop();
-            }
-
-            let ins = Box::new(CustomMultiInstruction::new(collected));
-
-            parsed.push(ProgramLine {
-                line_number: parser.cur_line,
-                compiled: Ok(Parsed::Instruction(ins)),
-            });
-        } else if cur == '{' || cur == '}' {
-            parsed.push(ProgramLine {
-                line_number: parser.cur_line,
-                compiled: if cur == '{' {
-                    current_scope += 1;
-                    Ok(Parsed::EnterLocalScope(current_scope))
-                } else {
-                    Ok(Parsed::LeaveLocalScope)
-                },
-            });
-            parser.pop();
-        } else if end_checker(cur) | cur.is_whitespace() {
-            // Handle empty lines and whitespaces
-            parser.pop();
-        } else {
-            // Handle numbers
-
-            parser.pop();
-            parsed.push(ProgramLine {
-                line_number: parser.cur_line,
-                compiled: Err(CompileError::UnknownToken(cur)),
-            });
-        }
-    }
-
-    Ok(parsed)
+    let mut c = inp.chars();
+    let parser = ParseReader::from(&mut c);
+    parser.parse()
 }

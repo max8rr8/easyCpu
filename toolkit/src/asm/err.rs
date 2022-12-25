@@ -21,5 +21,4 @@ pub enum CompileError {
     InvalidNumber(String),
 
     UnmatchedClosingBracket
-
 }
