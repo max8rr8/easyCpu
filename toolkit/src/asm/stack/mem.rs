@@ -68,10 +68,12 @@ impl Instruction for StackMemInstruction {
                 .set_flags(self.hi, self.lo, self.sw),
         ));
 
-        ins.push(Box::new(StackBaseInstruction::new(
-            StackBaseOperation::PUSH,
-            cpu::Register::R2,
-        )?));
+        if !matches!(self.op, MemOperation::STORE) {
+            ins.push(Box::new(StackBaseInstruction::new(
+                StackBaseOperation::PUSH,
+                cpu::Register::R2,
+            )?));
+        }
         // dbg!(&ins);
         compile_instructions(ins, ctx)
     }
