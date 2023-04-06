@@ -2,8 +2,9 @@
 mod asm;
 mod cpu;
 
-use asm::{err::CompileError, parse::Parsed, compile::compile};
+use asm::{compile::compile, err::CompileError, parse::Parsed, disasm::disassemle_instruction};
 use clap::Parser;
+use cpu::Instruction;
 use std::{fs, io::Write};
 
 use crate::asm::parse::parse_listing;
@@ -14,7 +15,7 @@ fn compile_file(src: std::path::PathBuf, dst: std::path::PathBuf) -> Result<(), 
 
     let program = parse_listing(contents.as_str());
     let program = program.map_err(|x| format!("Failed to parse: {:#?}", x))?;
-    
+
     let mut errors: Vec<(usize, CompileError)> = Vec::new();
     let mut parsed: Vec<Parsed> = Vec::new();
 
@@ -45,11 +46,22 @@ fn compile_file(src: std::path::PathBuf, dst: std::path::PathBuf) -> Result<(), 
     Ok(())
 }
 
+fn dissassemle_file(src: std::path::PathBuf) -> Result<(), String> {
+    let assembled = fs::read(&src).map_err(|e| format!("Failed to read file {:#?}: {}", src, e))?;
+    let assembled = assembled
+        .chunks(2)
+        .map(|chunk| u16::from_be_bytes([chunk[0], chunk[1]]));
+    let dissassembled: Vec<String> = assembled.map(|x| Instruction::decode(x)).map(|x| disassemle_instruction(x)).collect();
+    println!("{}", dissassembled.join("\n"));
+    Ok(())
+}
+
 #[derive(Parser)] // requires `derive` feature
 #[command(name = "easycpu_toolkit")]
 #[command(bin_name = "easycpu_toolkit")]
 enum EasyCpuToolkit {
     Asm(Asm),
+    Disasm(DisAsm),
 }
 
 #[derive(clap::Args)]
@@ -58,50 +70,30 @@ struct Asm {
     #[arg(index = 1)]
     src: std::path::PathBuf,
 
-    #[arg(short = 'O', default_value="./ram.bin")]
+    #[arg(short = 'O', default_value = "./ram.bin")]
     output: std::path::PathBuf,
+}
+
+#[derive(clap::Args)]
+#[command(author, version, about, long_about = None)]
+struct DisAsm {
+    #[arg(index = 1)]
+    src: std::path::PathBuf,
+    // TODO: add output to file with flags
+    // #[arg(short = 'O', default_value = "-")]
+    // output: std::path::PathBuf,
 }
 
 fn main() {
     let res: Result<(), String> = match EasyCpuToolkit::parse() {
-        EasyCpuToolkit::Asm(args) => {
-            compile_file(args.src, args.output)
+        EasyCpuToolkit::Asm(args) => compile_file(args.src, args.output),
+        EasyCpuToolkit::Disasm(args) => {
+            // dissassemle_file
+            dissassemle_file(args.src)
         }
     };
 
     if let Err(e) = res {
         eprintln!("{}", e);
     }
-    // println!("{:?}", args.src_file);
-    // let Ok(ok) = compiled;
-
-    // program.iter().map(|x| match x {
-
-    // })
-    // let instructions = vec![
-    //     cpu::Instruction::NOP,
-    //     cpu::Instruction::ADD(cpu::AluInstruction {
-    //         nx: false,
-    //         ny: false,
-    //         no: false,
-    //         src_a: cpu::Register::R2,
-    //         src_b: cpu::Register::R3,
-    //         dst: cpu::Register::R4,
-    //     }),
-    // ];
-    // for x in &instructions {
-    //     println!("{:?}", x)
-    // }
-
-    // let encoded: Result<Vec<_>, _> = instructions.iter().map(|&x| x.encode()).collect();
-
-    // if let Ok(encoded) = encoded {
-    //     for x in &encoded {
-    //         println!("{:#06}", x)
-    //     }
-    // }else if let Err(e) = encoded {
-    //     print!("Failed to create instruction {:#?}", e)
-    // }
-
-    // println!("Hello, world!");
 }

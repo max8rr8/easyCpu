@@ -10,6 +10,38 @@ pub enum Register {
     SP = 7,
 }
 
+impl From<u16> for Register {
+    fn from(e: u16) -> Self {
+        match e & 7 {
+            0 => Register::ZX,
+            1 => Register::PC,
+            2 => Register::R2,
+            3 => Register::R3,
+            4 => Register::R4,
+            5 => Register::R5,
+            6 => Register::LP,
+            7 => Register::SP,
+            _ => panic!("WHAT?")
+        }
+    }
+}
+
+impl ToString for Register {
+    fn to_string(&self) -> String {
+        match &self {
+            Register::ZX => String::from("ZX"),
+            Register::PC => String::from("PC"),
+            Register::R2 => String::from("R2"),
+            Register::R3 => String::from("R3"),
+            Register::R4 => String::from("R4"),
+            Register::R5 => String::from("R5"),
+            Register::LP => String::from("LP"),
+            Register::SP => String::from("SP"),
+        }
+    }
+}
+
+
 #[derive(Copy, Clone, Debug)]
 pub struct AluInstruction {
     pub nx: bool,
@@ -75,6 +107,18 @@ impl AluInstruction {
 
         res
     }
+
+    fn decode(ins: u16) -> Self {
+        AluInstruction {
+            nx: (ins >> 11) & 1 == 1,
+            ny: (ins >> 10) & 1 == 1,
+            no: (ins >> 9) & 1 == 1,
+            
+            dst: Register::from((ins >> 6) & 7),
+            src_a: Register::from((ins >> 3) & 7),
+            src_b: Register::from((ins >> 0) & 7),
+        }
+    }
 }
 
 impl MemInstruction {
@@ -99,6 +143,23 @@ impl MemInstruction {
         }
         Ok(())
     }
+
+    fn decode(ins: u16) -> Self {
+        let mut shift: i8 = (ins & 3).try_into().unwrap_or(0);
+        if (ins & 4) == 4 {
+            shift = -shift;
+        }
+
+        MemInstruction {
+            hi: (ins >> 11) & 1 == 1,
+            lo: (ins >> 10) & 1 == 1,
+            sw: (ins >> 9) & 1 == 1,
+            
+            dst: Register::from((ins >> 6) & 7),
+            addr: Register::from((ins >> 3) & 7),
+            shift,
+        }
+    }
 }
 
 impl BranchInstruction {
@@ -121,6 +182,22 @@ impl BranchInstruction {
             return Err(InstructionError::InvalidShift);
         }
         Ok(())
+    }
+
+    fn decode(ins: u16) -> Self {
+        let mut shift: i8 = (ins & 0x1f).try_into().unwrap_or(0);
+        if (ins & 0x20) == 0x20 {
+            shift = -shift;
+        }
+
+        BranchInstruction {
+            eq: (ins >> 11) & 1 == 1,
+            gt: (ins >> 10) & 1 == 1,
+            lt: (ins >> 9) & 1 == 1,
+            
+            cond: Register::from((ins >> 6) & 7),
+            shift,
+        }
     }
 }
 
@@ -150,5 +227,28 @@ impl Instruction {
     pub fn encode(&self) -> Result<u16, InstructionError> {
         self.validate()?;
         Ok(self.encode_unsafe())
+    }
+
+    pub fn decode(ins: u16) -> Self {
+        let command_type = ins >> 12;
+        match command_type {
+            0b0000 => {
+                if ins == 0 {
+                    Instruction::NOP
+                } else {
+                    Instruction::CUSTOM(ins)
+                }
+            }
+
+            0b0100 => Instruction::AND(AluInstruction::decode(ins)),
+            0b0101 => Instruction::ADD(AluInstruction::decode(ins)),
+
+            0b0010 => Instruction::LOAD(MemInstruction::decode(ins)),
+            0b0011 => Instruction::STORE(MemInstruction::decode(ins)),
+
+            0b0001 => Instruction::BRANCH(BranchInstruction::decode(ins)),
+
+            _ => Instruction::CUSTOM(ins),
+        }
     }
 }

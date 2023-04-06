@@ -15,3 +15,5 @@ pub mod load_const;
 pub mod load_label;
 pub mod jump;
 pub mod stack;
+
+pub mod disasm;
