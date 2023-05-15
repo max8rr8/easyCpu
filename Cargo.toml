@@ -1,0 +1,6 @@
+[workspace]
+
+members = [
+    "easycpu_lib",
+    "easycpu_toolkit",
+]

@@ -1,13 +1,9 @@
-// use cpu;
-mod asm;
-mod cpu;
-
-use asm::{compile::compile, err::CompileError, parse::Parsed, disasm::disassemle_instruction};
 use clap::Parser;
-use cpu::Instruction;
-use std::{fs, io::Write};
+use std::{fs, io::Write, process::exit};
 
-use crate::asm::parse::parse_listing;
+use easycpu_lib::asm::{compile::compile, disasm::disassemle_instruction, err::CompileError, parse::Parsed, parse::parse_listing};
+use easycpu_lib::cpu::Instruction;
+use easycpu_lib::exec::ExecCpu;
 
 fn compile_file(src: std::path::PathBuf, dst: std::path::PathBuf) -> Result<(), String> {
     let contents =
@@ -46,12 +42,20 @@ fn compile_file(src: std::path::PathBuf, dst: std::path::PathBuf) -> Result<(), 
     Ok(())
 }
 
-fn dissassemle_file(src: std::path::PathBuf) -> Result<(), String> {
-    let assembled = fs::read(&src).map_err(|e| format!("Failed to read file {:#?}: {}", src, e))?;
-    let assembled = assembled
+fn load_u16_file(src: std::path::PathBuf) -> Vec<u16> {
+    let assembled = fs::read(&src).unwrap();
+    assembled
         .chunks(2)
-        .map(|chunk| u16::from_be_bytes([chunk[0], chunk[1]]));
-    let dissassembled: Vec<String> = assembled.map(|x| Instruction::decode(x)).map(|x| disassemle_instruction(x)).collect();
+        .map(|chunk| u16::from_be_bytes([chunk[0], chunk[1]]))
+        .collect()
+}
+
+fn dissassemle_file(src: std::path::PathBuf) -> Result<(), String> {
+    let assembled = load_u16_file(src);
+    let dissassembled: Vec<String> = assembled.into_iter()
+        .map(|x| Instruction::decode(x))
+        .map(|x| disassemle_instruction(x))
+        .collect();
     println!("{}", dissassembled.join("\n"));
     Ok(())
 }
@@ -62,6 +66,7 @@ fn dissassemle_file(src: std::path::PathBuf) -> Result<(), String> {
 enum EasyCpuToolkit {
     Asm(Asm),
     Disasm(DisAsm),
+    Exec(Exec),
 }
 
 #[derive(clap::Args)]
@@ -84,6 +89,16 @@ struct DisAsm {
     // output: std::path::PathBuf,
 }
 
+#[derive(clap::Args)]
+#[command(author, version, about, long_about = None)]
+struct Exec {
+    #[arg(index = 1)]
+    initram: std::path::PathBuf,
+    // TODO: add output to file with flags
+    // #[arg(short = 'O', default_value = "-")]
+    // output: std::path::PathBuf,
+}
+
 fn main() {
     let res: Result<(), String> = match EasyCpuToolkit::parse() {
         EasyCpuToolkit::Asm(args) => compile_file(args.src, args.output),
@@ -91,9 +106,17 @@ fn main() {
             // dissassemle_file
             dissassemle_file(args.src)
         }
+        EasyCpuToolkit::Exec(args) => {
+            let init_ram = load_u16_file(args.initram);
+            let mut cpu = ExecCpu::new(init_ram);
+            // dissassemle_file
+            cpu.run();
+            Ok(())
+        }
     };
 
     if let Err(e) = res {
         eprintln!("{}", e);
+        exit(1);
     }
 }

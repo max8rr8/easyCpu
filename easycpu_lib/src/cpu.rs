@@ -21,7 +21,7 @@ impl From<u16> for Register {
             5 => Register::R5,
             6 => Register::LP,
             7 => Register::SP,
-            _ => panic!("WHAT?")
+            _ => panic!("WHAT?"),
         }
     }
 }
@@ -40,7 +40,6 @@ impl ToString for Register {
         }
     }
 }
-
 
 #[derive(Copy, Clone, Debug)]
 pub struct AluInstruction {
@@ -74,7 +73,6 @@ pub struct BranchInstruction {
     pub shift: i8,
 }
 
-
 #[derive(Copy, Clone, Debug)]
 #[allow(non_snake_case)]
 pub enum Instruction {
@@ -92,6 +90,29 @@ pub enum InstructionError {
     InvalidShift,
 }
 
+fn flags_to_string(names: &str, flags: [bool; 3]) -> String {
+    let flags = names
+        .char_indices()
+        .filter(|(i, c)| flags[*i])
+        .map(|(i, x)| x);
+
+    let flags = ".".chars().chain(flags);
+    let flags: String = flags.collect();
+
+    if flags.len() == 1 {
+        return String::from("");
+    } else {
+        return flags;
+    }
+}
+
+pub trait CpuState {
+    fn get_reg(&mut self, reg: Register) -> u16;
+    fn set_reg(&mut self, reg: Register, val: u16);
+
+    fn get_mem(&mut self, addr: u16) -> u16;
+    fn set_mem(&mut self, addr: u16, val: u16);
+}
 
 impl AluInstruction {
     fn encode(&self) -> u16 {
@@ -113,11 +134,58 @@ impl AluInstruction {
             nx: (ins >> 11) & 1 == 1,
             ny: (ins >> 10) & 1 == 1,
             no: (ins >> 9) & 1 == 1,
-            
+
             dst: Register::from((ins >> 6) & 7),
             src_a: Register::from((ins >> 3) & 7),
             src_b: Register::from((ins >> 0) & 7),
         }
+    }
+
+    fn to_string(&self, is_add: bool) -> String {
+        format!(
+            "{}{} {} {} {}",
+            if is_add { "ADD" } else { "AND" },
+            flags_to_string("xyo", [self.nx, self.ny, self.no]),
+            self.dst.to_string(),
+            self.src_a.to_string(),
+            self.src_b.to_string(),
+        )
+    }
+
+    fn execute(&self, state: &mut dyn CpuState, is_add: bool) {
+        let mut x = state.get_reg(self.src_a);
+        let mut y = state.get_reg(self.src_b);
+
+        // ALU Instruction override
+        let res = if (self.nx, self.ny, self.no) == (true, false, false) {
+            if is_add {
+                x ^ y
+            } else {
+                x << 1
+            }
+        } else {
+            if self.nx {
+                x = !x;
+            }
+
+            if self.ny {
+                y = !y;
+            }
+
+            let mut res = if is_add {
+                u16::wrapping_add(x, y)
+            } else {
+                x & y
+            };
+
+            if self.no {
+                res = !res;
+            }
+
+            res
+        };
+
+        state.set_reg(self.dst, res);
     }
 }
 
@@ -154,10 +222,59 @@ impl MemInstruction {
             hi: (ins >> 11) & 1 == 1,
             lo: (ins >> 10) & 1 == 1,
             sw: (ins >> 9) & 1 == 1,
-            
+
             dst: Register::from((ins >> 6) & 7),
             addr: Register::from((ins >> 3) & 7),
             shift,
+        }
+    }
+
+    fn to_string(&self, is_store: bool) -> String {
+        format!(
+            "{}{} {} {} {}",
+            if is_store { "STORE" } else { "LOAD" },
+            flags_to_string("hls", [self.hi, self.lo, self.sw]),
+            self.dst.to_string(),
+            self.addr.to_string(),
+            self.shift,
+        )
+    }
+
+    fn execute(&self, state: &mut dyn CpuState, is_store: bool) {
+        let addr_shift: u16 = if self.shift >= 0 {
+            self.shift.unsigned_abs().into()
+        } else {
+            u16::wrapping_sub(0, self.shift.unsigned_abs().into())
+        };
+        let addr = state.get_reg(self.addr).wrapping_add(addr_shift);
+        let mut val = state.get_reg(self.dst);
+        if is_store {
+            state.set_mem(addr, val);
+        } else {
+            let mut mem_val = state.get_mem(addr);
+            // Either add or sub
+            let val = if !self.hi && !self.lo {
+                if self.sw {
+                    val.wrapping_sub(mem_val)
+                } else {
+                    val.wrapping_add(mem_val)
+                }
+            } else {
+                if self.sw {
+                    mem_val = mem_val.swap_bytes();
+                }
+
+                let [valhi, vallo] = val.to_be_bytes();
+                let [memhi, memlo] = mem_val.to_be_bytes();
+
+                let reshi = if self.hi { memhi } else { valhi };
+
+                let reslo = if self.lo { memlo } else { vallo };
+
+                u16::from_be_bytes([reshi, reslo])
+            };
+
+            state.set_reg(self.dst, val)
         }
     }
 }
@@ -194,9 +311,39 @@ impl BranchInstruction {
             eq: (ins >> 11) & 1 == 1,
             gt: (ins >> 10) & 1 == 1,
             lt: (ins >> 9) & 1 == 1,
-            
+
             cond: Register::from((ins >> 6) & 7),
             shift,
+        }
+    }
+
+    fn to_string(&self) -> String {
+        format!(
+            "BRANCH{} {} {}",
+            flags_to_string("egl", [self.eq, self.gt, self.lt]),
+            self.cond.to_string(),
+            self.shift,
+        )
+    }
+
+    fn execute(&self, state: &mut dyn CpuState) {
+        let cond = state.get_reg(self.cond);
+        let should_jump = if cond == 0 {
+            self.eq
+        } else if cond < 0x8000 {
+            self.gt
+        } else {
+            self.lt
+        };
+
+        if should_jump {
+            let cur_pc = state.get_reg(Register::PC);
+            let next_pc = if self.shift < 0 {
+                cur_pc.wrapping_sub(self.shift.unsigned_abs() as u16)
+            } else {
+                cur_pc.wrapping_add(self.shift.unsigned_abs() as u16)
+            };
+            state.set_reg(Register::PC, next_pc)
         }
     }
 }
@@ -249,6 +396,32 @@ impl Instruction {
             0b0001 => Instruction::BRANCH(BranchInstruction::decode(ins)),
 
             _ => Instruction::CUSTOM(ins),
+        }
+    }
+
+    pub fn execute(&self, state: &mut dyn CpuState) {
+        match self {
+            Instruction::NOP => (),
+            Instruction::AND(ins) => ins.execute(state, false),
+            Instruction::ADD(ins) => ins.execute(state, true),
+            Instruction::LOAD(ins) => ins.execute(state, false),
+            Instruction::STORE(ins) => ins.execute(state, true),
+            Instruction::BRANCH(ins) => ins.execute(state),
+            Instruction::CUSTOM(_) => (),
+        }
+    }
+}
+
+impl ToString for Instruction {
+    fn to_string(&self) -> String {
+        match self {
+            Instruction::NOP => String::from("NOP"),
+            Instruction::AND(ins) => ins.to_string(false),
+            Instruction::ADD(ins) => ins.to_string(true),
+            Instruction::LOAD(ins) => ins.to_string(false),
+            Instruction::STORE(ins) => ins.to_string(true),
+            Instruction::BRANCH(ins) => ins.to_string(),
+            Instruction::CUSTOM(ins) => format!("0x{:04x}", ins),
         }
     }
 }

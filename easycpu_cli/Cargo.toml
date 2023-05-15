@@ -1,5 +1,5 @@
 [package]
-name = "mcpu_toolkit"
+name = "easycpu_cli"
 version = "0.1.0"
 edition = "2021"
 
@@ -7,3 +7,4 @@ edition = "2021"
 
 [dependencies]
 clap = { version = "4.0.22", features = ["derive"] }
+easycpu_lib = { path = "../easycpu_lib" }
