@@ -22,7 +22,7 @@ fn compile_file(src: std::path::PathBuf, dst: std::path::PathBuf) -> Result<(), 
         }
     }
 
-    if errors.len() > 0 {
+    if errors.is_empty() {
         let s: Vec<String> = errors
             .iter()
             .map(|(line, err)| format!("Line {}: {:#?}", line, err))
@@ -43,7 +43,7 @@ fn compile_file(src: std::path::PathBuf, dst: std::path::PathBuf) -> Result<(), 
 }
 
 fn load_u16_file(src: std::path::PathBuf) -> Vec<u16> {
-    let assembled = fs::read(&src).unwrap();
+    let assembled = fs::read(src).unwrap();
     assembled
         .chunks(2)
         .map(|chunk| u16::from_be_bytes([chunk[0], chunk[1]]))
@@ -53,8 +53,8 @@ fn load_u16_file(src: std::path::PathBuf) -> Vec<u16> {
 fn dissassemle_file(src: std::path::PathBuf) -> Result<(), String> {
     let assembled = load_u16_file(src);
     let dissassembled: Vec<String> = assembled.into_iter()
-        .map(|x| Instruction::decode(x))
-        .map(|x| disassemle_instruction(x))
+        .map(Instruction::decode)
+        .map(disassemle_instruction)
         .collect();
     println!("{}", dissassembled.join("\n"));
     Ok(())

@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, hash_map::Entry};
 
 use crate::{asm::inst::CompileContext, cpu::InstructionError};
 
@@ -14,10 +14,10 @@ pub fn compile(parsed: Vec<Parsed>) -> Result<Vec<u16>, CompileError> {
         match p {
             Parsed::Label(label) => {
                 let key = (cur_scope, label);
-                if labels.contains_key(&key) {
-                    return Err(CompileError::LabelRedefined(label.clone()));
+                if let Entry::Vacant(e) = labels.entry(key) {
+                    e.insert(None);
                 } else {
-                    labels.insert(key, None);
+                    return Err(CompileError::LabelRedefined(label.clone()));
                 }
             }
 
@@ -57,7 +57,7 @@ pub fn compile(parsed: Vec<Parsed>) -> Result<Vec<u16>, CompileError> {
                     })?;
                     let c: Result<Vec<_>, InstructionError> =
                         c.iter().map(|x| x.encode()).collect();
-                    let c = c.map_err(|x| CompileError::InvalidInstruction(x))?;
+                    let c = c.map_err(CompileError::InvalidInstruction)?;
                     compiled.extend(c);
                 }
 

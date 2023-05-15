@@ -39,8 +39,8 @@ impl BranchInstruction {
     }
 
     pub fn set_flags_from_str(&mut self, s: &str) -> &mut BranchInstruction {
-        if s.contains("E") | s.contains("G") | s.contains("L") {
-          self.set_flags(s.contains("E"), s.contains("G"), s.contains("L"));
+        if s.contains('E') | s.contains('G') | s.contains('L') {
+          self.set_flags(s.contains('E'), s.contains('G'), s.contains('L'));
         }
         self
     }

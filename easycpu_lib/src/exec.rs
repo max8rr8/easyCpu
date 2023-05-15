@@ -1,7 +1,6 @@
-use std::fmt::format;
-
 use crate::cpu::{self, CpuState};
 
+#[allow(clippy::upper_case_acronyms)]
 enum ExecEvent {
     NONE,
     JUMP(u16),

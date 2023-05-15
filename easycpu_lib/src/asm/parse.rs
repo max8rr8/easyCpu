@@ -95,7 +95,7 @@ fn parse_instruction(s: String) -> Result<Parsed, CompileError> {
         return Ok(Parsed::Instruction(Box::new(ins)));
     }
 
-    if let Some(stripped_cmd) = command_pure.strip_prefix("$") {
+    if let Some(stripped_cmd) = command_pure.strip_prefix('$') {
         return stack::parse_instruction(stripped_cmd, command_flags, parts);
     }
 
@@ -103,27 +103,15 @@ fn parse_instruction(s: String) -> Result<Parsed, CompileError> {
 }
 
 fn nummeric_checker(s: char) -> bool {
-    match s {
-        '0'..='9' => true,
-        '+' | '-' => true,
-        _ => false,
-    }
+    matches!(s, '0'..='9' | '+' | '-')
 }
 
 fn letter_checker(s: char) -> bool {
-    match s {
-        'a'..='z' => true,
-        'A'..='Z' => true,
-        '$' => true,
-        _ => false,
-    }
+    matches!(s, 'a'..='z' | 'A'..='Z' | '$')
 }
 
 fn end_checker(s: char) -> bool {
-    match s {
-        ';' | '#' | '\n' | '(' => true,
-        _ => false,
-    }
+    matches!(s, ';' | '#' | '\n' | '(')
 }
 
 struct ParseReader<'a> {
@@ -177,7 +165,7 @@ impl<'a> ParseReader<'a> {
             self.pop();
         }
 
-        return Ok(collected);
+        Ok(collected)
     }
 
     fn parse(mut self) -> Result<Vec<ProgramLine>, CompileError> {
@@ -241,13 +229,11 @@ impl<'a> ParseReader<'a> {
                         };
     
                         is_special = false;
-                    } else {
-                        if cur == '\\' {
-                            is_special = true;
-                        } else if cur == '"' {
-                            self.pop();
-                            break;
-                        }
+                    } else if cur == '\\' {
+                        is_special = true;
+                    } else if cur == '"' {
+                        self.pop();
+                        break;
                     }
     
                     if !is_special {
@@ -346,7 +332,7 @@ impl<'a> From<&'a mut Chars<'a>> for ParseReader<'a> {
     }
 }
 
-pub fn parse_listing<'a>(inp: &'a str) -> Result<Vec<ProgramLine>, CompileError> {
+pub fn parse_listing(inp: &str) -> Result<Vec<ProgramLine>, CompileError> {
     let mut c = inp.chars();
     let parser = ParseReader::from(&mut c);
     parser.parse()

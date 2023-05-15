@@ -77,11 +77,11 @@ impl MemInstruction {
     }
 
     pub fn set_flags_from_str(&mut self, s: &str) -> &mut MemInstruction {
-        if s.contains("H") || s.contains("L") {
+        if s.contains('H') || s.contains('L') {
             // If either H or L are defined we shall set all flags
-            self.set_flags(s.contains("H"), s.contains("L"), s.contains("S"));
+            self.set_flags(s.contains('H'), s.contains('L'), s.contains('S'));
         } else {
-            self.set_flags(false, false, s.contains("S"));
+            self.set_flags(false, false, s.contains('S'));
         }
         self
     }

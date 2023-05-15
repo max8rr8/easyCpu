@@ -93,16 +93,16 @@ pub enum InstructionError {
 fn flags_to_string(names: &str, flags: [bool; 3]) -> String {
     let flags = names
         .char_indices()
-        .filter(|(i, c)| flags[*i])
-        .map(|(i, x)| x);
+        .filter(|(i, _)| flags[*i])
+        .map(|(_, x)| x);
 
     let flags = ".".chars().chain(flags);
     let flags: String = flags.collect();
 
     if flags.len() == 1 {
-        return String::from("");
+        String::from("")
     } else {
-        return flags;
+        flags
     }
 }
 
@@ -124,7 +124,7 @@ impl AluInstruction {
 
         res |= (self.dst as u16) << 6;
         res |= (self.src_a as u16) << 3;
-        res |= (self.src_b as u16) << 0;
+        res |= self.src_b as u16;
 
         res
     }
@@ -137,11 +137,11 @@ impl AluInstruction {
 
             dst: Register::from((ins >> 6) & 7),
             src_a: Register::from((ins >> 3) & 7),
-            src_b: Register::from((ins >> 0) & 7),
+            src_b: Register::from(ins & 7),
         }
     }
 
-    fn to_string(&self, is_add: bool) -> String {
+    fn display(&self, is_add: bool) -> String {
         format!(
             "{}{} {} {} {}",
             if is_add { "ADD" } else { "AND" },
@@ -200,7 +200,7 @@ impl MemInstruction {
         res |= (self.dst as u16) << 6;
         res |= (self.addr as u16) << 3;
         res |= (self.shift.is_negative() as u16) << 2;
-        res |= (self.shift.abs() as u16) << 0;
+        res |= self.shift.unsigned_abs() as u16;
 
         res
     }
@@ -229,7 +229,7 @@ impl MemInstruction {
         }
     }
 
-    fn to_string(&self, is_store: bool) -> String {
+    fn display(&self, is_store: bool) -> String {
         format!(
             "{}{} {} {} {}",
             if is_store { "STORE" } else { "LOAD" },
@@ -247,7 +247,7 @@ impl MemInstruction {
             u16::wrapping_sub(0, self.shift.unsigned_abs().into())
         };
         let addr = state.get_reg(self.addr).wrapping_add(addr_shift);
-        let mut val = state.get_reg(self.dst);
+        let val = state.get_reg(self.dst);
         if is_store {
             state.set_mem(addr, val);
         } else {
@@ -289,7 +289,7 @@ impl BranchInstruction {
 
         res |= (self.cond as u16) << 6;
         res |= (self.shift.is_negative() as u16) << 5;
-        res |= (self.shift.abs() as u16) << 0;
+        res |= self.shift.unsigned_abs() as u16;
 
         res
     }
@@ -317,7 +317,7 @@ impl BranchInstruction {
         }
     }
 
-    fn to_string(&self) -> String {
+    fn display(&self) -> String {
         format!(
             "BRANCH{} {} {}",
             flags_to_string("egl", [self.eq, self.gt, self.lt]),
@@ -416,11 +416,11 @@ impl ToString for Instruction {
     fn to_string(&self) -> String {
         match self {
             Instruction::NOP => String::from("NOP"),
-            Instruction::AND(ins) => ins.to_string(false),
-            Instruction::ADD(ins) => ins.to_string(true),
-            Instruction::LOAD(ins) => ins.to_string(false),
-            Instruction::STORE(ins) => ins.to_string(true),
-            Instruction::BRANCH(ins) => ins.to_string(),
+            Instruction::AND(ins) => ins.display(false),
+            Instruction::ADD(ins) => ins.display(true),
+            Instruction::LOAD(ins) => ins.display(false),
+            Instruction::STORE(ins) => ins.display(true),
+            Instruction::BRANCH(ins) => ins.display(),
             Instruction::CUSTOM(ins) => format!("0x{:04x}", ins),
         }
     }

@@ -71,9 +71,9 @@ impl StackLocalInstruction {
     ) -> Result<Vec<Box<dyn Instruction>>, CompileError> {
         let shift = match mode {
             StackLocalMode::VAR => idx,
-            StackLocalMode::ARG => (0 as u16).wrapping_sub(4).wrapping_sub(idx),
+            StackLocalMode::ARG => 0u16.wrapping_sub(4).wrapping_sub(idx),
         };
-        return Ok(vec![
+        Ok(vec![
             Box::new(LoadConstInstruction::new(
                 LoadConstOperation::LOAD,
                 cpu::Register::R3,
@@ -85,7 +85,7 @@ impl StackLocalInstruction {
                 cpu::Register::R3,
                 cpu::Register::LP,
             )),
-        ]);
+        ])
     }
 }
 

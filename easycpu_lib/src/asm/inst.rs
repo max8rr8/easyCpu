@@ -58,6 +58,7 @@ impl Instruction for CustomMultiInstruction {
 pub struct NopInstruction {
 }
 
+#[allow(clippy::new_without_default)]
 impl NopInstruction {
   pub fn new() -> Self {
       NopInstruction {  }

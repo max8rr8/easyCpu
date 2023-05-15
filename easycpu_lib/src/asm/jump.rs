@@ -77,10 +77,10 @@ impl JumpInstruction {
 
     fn convert_u16_to_shift(inp: u16) -> Result<i8, CompileError> {
         if inp < 32 {
-            return Ok(inp as i8);
+            Ok(inp as i8)
         } else if inp > 0xFFE0 {
             let conv = u16::MAX.wrapping_sub(inp) as i8;
-            return Ok(-conv - 1);
+            Ok(-conv - 1)
         } else {
             Err(CompileError::ShiftIsTooBig(0x7f))
         }

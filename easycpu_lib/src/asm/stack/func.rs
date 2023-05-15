@@ -72,7 +72,7 @@ impl Instruction for StackFunctionInstruction {
                 Box::new(LoadConstInstruction::new(
                     LoadConstOperation::LOAD,
                     cpu::Register::R2,
-                    (0 as u16).wrapping_sub(self.args + 1).wrapping_add(self.returned),
+                    0u16.wrapping_sub(self.args + 1).wrapping_add(self.returned),
                 )?),
                 Box::new(AluInstruction::new(
                     AluOperation::ADD,

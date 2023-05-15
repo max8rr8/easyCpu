@@ -43,7 +43,7 @@ impl Instruction for StackCallInstruction {
                 StackConstInstruction::new_label(retu_label.clone()).compile(&CompileContext {
                     current_pc: 0,
                     label_map: &cur_hashmap,
-                    scope_stack: &vec![0xffff as usize],
+                    scope_stack: &vec![0xffff],
                 })?,
             );
 

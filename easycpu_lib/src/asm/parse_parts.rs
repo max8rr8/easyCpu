@@ -25,7 +25,7 @@ impl ParsedLabel {
 }
 
 pub fn parse_number(inp: &str) -> Result<i32, CompileError> {
-    let (s, is_negative) = match inp.strip_prefix("-") {
+    let (s, is_negative) = match inp.strip_prefix('-') {
         Some(s) => (s, true),
         None => (inp, false),
     };

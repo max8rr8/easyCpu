@@ -131,7 +131,7 @@ impl AluInstruction {
     }
 
     pub fn set_flags_from_str(&mut self, s: &str) -> &mut AluInstruction {
-        self.set_flags(s.contains("X"), s.contains("Y"), s.contains("O"));
+        self.set_flags(s.contains('X'), s.contains('Y'), s.contains('O'));
         self
     }
 

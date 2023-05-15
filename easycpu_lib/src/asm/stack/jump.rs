@@ -1,4 +1,4 @@
-use crate::asm::inst::{compile_instructions, CompileContext};
+use crate::asm::inst::CompileContext;
 use crate::asm::jump::{JumpInstruction, JumpOperation};
 use crate::asm::parse_parts::{ParseParts, ParsedLabel};
 use crate::asm::{err::CompileError, inst::Instruction};
