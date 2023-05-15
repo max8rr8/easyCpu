@@ -2,5 +2,5 @@
 
 members = [
     "easycpu_lib",
-    "easycpu_toolkit",
+    "easycpu_cli",
 ]

@@ -1,9 +1,11 @@
+mod exec;
+
 use clap::Parser;
+use exec::DebugCpu;
 use std::{fs, io::Write, process::exit};
 
 use easycpu_lib::asm::{compile::compile, disasm::disassemle_instruction, err::CompileError, parse::Parsed, parse::parse_listing};
 use easycpu_lib::cpu::Instruction;
-use easycpu_lib::exec::ExecCpu;
 
 fn compile_file(src: std::path::PathBuf, dst: std::path::PathBuf) -> Result<(), String> {
     let contents =
@@ -14,7 +16,7 @@ fn compile_file(src: std::path::PathBuf, dst: std::path::PathBuf) -> Result<(), 
 
     let mut errors: Vec<(usize, CompileError)> = Vec::new();
     let mut parsed: Vec<Parsed> = Vec::new();
-
+    
     for line in program {
         match line.compiled {
             Ok(c) => parsed.push(c),
@@ -22,7 +24,7 @@ fn compile_file(src: std::path::PathBuf, dst: std::path::PathBuf) -> Result<(), 
         }
     }
 
-    if errors.is_empty() {
+    if !errors.is_empty() {
         let s: Vec<String> = errors
             .iter()
             .map(|(line, err)| format!("Line {}: {:#?}", line, err))
@@ -108,13 +110,12 @@ fn main() {
         }
         EasyCpuToolkit::Exec(args) => {
             let init_ram = load_u16_file(args.initram);
-            let mut cpu = ExecCpu::new(init_ram);
+            let mut cpu = DebugCpu::new(init_ram);
             // dissassemle_file
             cpu.run();
             Ok(())
         }
     };
-
     if let Err(e) = res {
         eprintln!("{}", e);
         exit(1);

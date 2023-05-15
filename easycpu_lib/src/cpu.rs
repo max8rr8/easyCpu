@@ -1,3 +1,5 @@
+use crate::exec::ExecCpu;
+
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum Register {
     ZX = 0,
@@ -106,13 +108,6 @@ fn flags_to_string(names: &str, flags: [bool; 3]) -> String {
     }
 }
 
-pub trait CpuState {
-    fn get_reg(&mut self, reg: Register) -> u16;
-    fn set_reg(&mut self, reg: Register, val: u16);
-
-    fn get_mem(&mut self, addr: u16) -> u16;
-    fn set_mem(&mut self, addr: u16, val: u16);
-}
 
 impl AluInstruction {
     fn encode(&self) -> u16 {
@@ -152,7 +147,7 @@ impl AluInstruction {
         )
     }
 
-    fn execute(&self, state: &mut dyn CpuState, is_add: bool) {
+    fn execute(&self, state: &mut ExecCpu, is_add: bool) {
         let mut x = state.get_reg(self.src_a);
         let mut y = state.get_reg(self.src_b);
 
@@ -240,7 +235,7 @@ impl MemInstruction {
         )
     }
 
-    fn execute(&self, state: &mut dyn CpuState, is_store: bool) {
+    fn execute(&self, state: &mut ExecCpu, is_store: bool) {
         let addr_shift: u16 = if self.shift >= 0 {
             self.shift.unsigned_abs().into()
         } else {
@@ -326,7 +321,7 @@ impl BranchInstruction {
         )
     }
 
-    fn execute(&self, state: &mut dyn CpuState) {
+    fn execute(&self, state: &mut ExecCpu) {
         let cond = state.get_reg(self.cond);
         let should_jump = if cond == 0 {
             self.eq
@@ -399,7 +394,7 @@ impl Instruction {
         }
     }
 
-    pub fn execute(&self, state: &mut dyn CpuState) {
+    pub fn execute(&self, state: &mut ExecCpu) {
         match self {
             Instruction::NOP => (),
             Instruction::AND(ins) => ins.execute(state, false),

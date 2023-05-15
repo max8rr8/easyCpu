@@ -1,7 +1,7 @@
-LC r2 0b1101	#	Operand	1
-LC r3 0b1011	#	Operand	2
+LCONST r2 0b1101	#	Operand	1
+LCONST r3 0b1011	#	Operand	2
 
-LC r4 0 # Operation 0 and 1 add
+LCONST r4 0 # Operation 0 and 1 add
 
 JEQ r4 DO_AND
 
