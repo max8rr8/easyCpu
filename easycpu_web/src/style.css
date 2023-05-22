@@ -1,0 +1,16 @@
+.mainArea {
+  display: flex;
+  flex-direction: row;
+}
+
+.asmInput, .disasmOutput {
+  margin: 20px;
+  border: black 2px solid;
+  flex: 1;
+  height: 800px;
+  overflow: scroll;
+}
+
+.failed_compile {
+  background: rgba(255, 0, 0, 0.2);
+}
