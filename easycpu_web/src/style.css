@@ -11,6 +11,6 @@
   overflow: scroll;
 }
 
-.failed_compile {
+.disassemblyError {
   background: rgba(255, 0, 0, 0.2);
 }

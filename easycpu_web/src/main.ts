@@ -1,46 +1,10 @@
 import './style.css'
-import init, { compile, disassemble } from 'easycpu_wasm'
+import { App } from './app'
+import { AppUI } from './ui';
 
-await init()
+const app = new App();
 
-const appEl = document.querySelector<HTMLDivElement>('#app');
+const rootEl = document.querySelector<HTMLDivElement>('#app') ?? document.createElement('div')
+const ui = new AppUI(app, rootEl);
 
-const mainAreaEl = document.createElement("div")
-mainAreaEl.className = "mainArea"
-
-
-const asmInputEl = document.createElement("textarea")
-asmInputEl.className = "asmInput"
-
-const disasmOutputEl = document.createElement("pre")
-disasmOutputEl.className = "disasmOutput"
-
-mainAreaEl.append(asmInputEl, disasmOutputEl)
-
-const toolbarEl = document.createElement("div")
-
-const compileBtnEl = document.createElement("button")
-compileBtnEl.className = "compileBtn"
-compileBtnEl.innerText = 'Compile'
-
-compileBtnEl.onclick = () => {
-    disasmOutputEl.classList.remove("failed_compile")
-
-    let asmInput  = asmInputEl.value
-    try {
-        let compiled = compile(asmInput)
-        let disassembled = disassemble(compiled)
-        disasmOutputEl.innerText = disassembled;
-    } catch (e) {
-        if(typeof e == 'string') {
-            disasmOutputEl.classList.add("failed_compile")
-            disasmOutputEl.innerText = e.toString();
-        } else {
-            throw e
-        }
-    }
-}
-
-toolbarEl.append(compileBtnEl)
-
-appEl?.append(toolbarEl, mainAreaEl)
+console.log("EasyCPU IDE running app:", app, "ui:", ui)
