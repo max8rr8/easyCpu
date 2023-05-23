@@ -1,4 +1,4 @@
-import init, { compile, disassemble } from 'easycpu_wasm'
+import init, { compile, disassemble, DebugCpu } from 'easycpu_wasm'
 
 await init()
 
@@ -31,6 +31,8 @@ export class App extends EventTarget {
     disassemblyError: string | null
     disassembled: string
 
+    exec: DebugCpu
+
     constructor() {
         super();
 
@@ -42,8 +44,11 @@ export class App extends EventTarget {
         this.disassemblyError = null
         this.disassembled = ''
 
-        this.addEventListener('programUpdate', this.recompile)
-        this.addEventListener('compile', this.disassemble)
+        this.exec = new DebugCpu(this.compiled)
+
+        this.addEventListener('programUpdate', () => this.recompile())
+        this.addEventListener('compile', () => this.resetCpu())
+        this.addEventListener('compile', () => this.disassemble())
 
         this.setProgram(DEFAULT_PROGRAM)
     }
@@ -90,5 +95,17 @@ export class App extends EventTarget {
         }
 
         this.dispatchEvent(new Event('disassembly'))
+    }
+
+    resetCpu() {
+        if(!this.compileError) {
+            this.exec.reset(this.compiled)
+            this.dispatchEvent(new Event('exec'))   
+        }
+    }
+
+    stepCpu() {
+        this.exec.step()
+        this.dispatchEvent(new Event('exec'))
     }
 }

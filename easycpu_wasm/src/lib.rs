@@ -1,3 +1,5 @@
+pub mod exec;
+
 use wasm_bindgen::prelude::*;
 
 use easycpu_lib::{asm, cpu};
