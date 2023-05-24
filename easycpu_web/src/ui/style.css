@@ -1,0 +1,123 @@
+@import url('https://fonts.googleapis.com/css2?family=Source+Code+Pro&display=swap');
+
+* {
+  font-family: 'Source Code Pro', monospace;
+}
+
+html, body, #app, #app > div {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+body {
+  --background-color: #1E1E1E;
+  --foreground-color: #D4D4D4;
+
+  background-color: var(--background-color);
+  color: var(--foreground-color);
+}
+
+button {
+  color: var(--foreground-color);
+  border: none;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+}
+
+button:disabled {
+  background: rgba(255, 255, 255, 0.05) !important;
+  color: #888
+}
+
+button:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+button:active {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+input {
+  background: rgba(255, 255, 255, 0.1);
+  border: solid 1px rgba(255, 255, 255, 0.5);
+  border-radius: 4px;
+  color: var(--foreground-color);
+}
+
+.disassemblyError {
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  right: 0;
+
+  margin: 0;
+  padding: 10px;
+  box-sizing: border-box;
+
+  background: rgba(155, 0, 0, 0.85);
+  color: white;
+  overflow: auto;
+}
+
+.codeLine {
+  margin: 2px;
+}
+
+.curExec {
+  background-color: rgba(255, 128, 0, 0.4);
+}
+
+
+.cpuExec .header {
+  border-bottom: solid 1px rgba(255, 255, 255, 0.2);
+  display: flex;
+  padding: 5px;
+  font-size: 1.4em;
+  gap: 10px;
+}
+
+.cpuExec .header span {
+  flex: 1;
+}
+
+.cpuExec .header button {
+  width: 60px;
+}
+
+.registers {
+  padding: 10px;
+}
+
+.registers h1 {
+  font-weight: normal;
+  font-size: 1.5em;
+  margin-top: 0px;
+  margin-bottom: 10px;
+}
+
+.registerTable {
+  border-collapse: collapse;
+  font-size: 1.3em;
+}
+
+.registerTable td {
+  padding: 2px;
+  border: solid 1px rgba(255, 255, 255, 0.2);
+}
+
+.registerTable input {
+  width: 100px;
+  border: none;
+  border-radius: none;
+  text-align: right;
+  background-color: var(--background-color);
+  font-size: 1em;
+}
+
+.registerTable td:nth-child(odd) {
+  background-color: rgba(255, 255, 255, 0.1);
+}

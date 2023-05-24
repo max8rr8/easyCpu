@@ -1,6 +1,5 @@
-import './style.css'
 import { App } from './app'
-import { AppUI } from './ui';
+import { AppUI } from './ui'
 
 const app = new App();
 
