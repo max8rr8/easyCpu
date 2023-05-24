@@ -1,7 +1,6 @@
-import init, { compile, disassemble, DebugCpu } from 'easycpu_wasm'
+import { compile, disassemble, DebugCpu } from 'easycpu_wasm'
 import { RegistersState } from 'easycpu_wasm'
 
-await init()
 
 const DEFAULT_PROGRAM = `
 LCONST r2 0b1101	#	Operand	1

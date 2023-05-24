@@ -2,12 +2,7 @@ import './style.css'
 import { App } from '../app'
 import { CpuExecOutput } from './exec'
 import { DisassemblyOutput, ProgramInput } from './program'
-import {
-  ComponentContainer,
-  ResolvedComponentItemConfig,
-  VirtualLayout,
-  GoldenLayout,
-} from 'golden-layout'
+import { GoldenLayout } from 'golden-layout'
 import 'golden-layout/dist/css/goldenlayout-base.css'
 import 'golden-layout/dist/css/themes/goldenlayout-dark-theme.css'
 

@@ -1,0 +1,43 @@
+on: [push, pull_request]
+
+jobs:
+  web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+        with:  
+          toolchain: stable
+
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 18.x
+
+      - uses: jetli/wasm-pack-action@v0.4.0
+        with:  
+          version: latest
+
+      - name: Build wasm
+        working-directory: easycpu_wasm
+        run: wasm-pack build . --target web
+
+      - name: Install web dependencies
+        working-directory: easycpu_web
+        run: yarn
+
+      - name: Build web
+        working-directory: easycpu_web
+        run: yarn build
+
+      - uses: actions/upload-artifact@v3
+        with:
+          name: web
+          path: easycpu_web/dist/
+
+      - name: Deploy github pages
+        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+        uses: JamesIves/github-pages-deploy-action@v4
+        with:
+          folder: easycpu_web/dist/ 
+
+      
