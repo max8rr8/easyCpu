@@ -1,4 +1,5 @@
 import init, { compile, disassemble, DebugCpu } from 'easycpu_wasm'
+import { RegistersState } from 'easycpu_wasm'
 
 await init()
 
@@ -29,9 +30,11 @@ export class App extends EventTarget {
     compiled: Uint16Array
 
     disassemblyError: string | null
-    disassembled: string
+    disassembled: string[]
 
     exec: DebugCpu
+    execRegisters: RegistersState
+    execPC: number
 
     constructor() {
         super();
@@ -42,9 +45,11 @@ export class App extends EventTarget {
         this.compiled = new Uint16Array()
 
         this.disassemblyError = null
-        this.disassembled = ''
+        this.disassembled = []
 
         this.exec = new DebugCpu(this.compiled)
+        this.execRegisters = this.exec.get_registers()
+        this.execPC = 0
 
         this.addEventListener('programUpdate', () => this.recompile())
         this.addEventListener('compile', () => this.resetCpu())
@@ -77,14 +82,14 @@ export class App extends EventTarget {
     }
 
     disassemble() {
-        this.disassembled = ''
+        this.disassembled = []
         if(this.compileError) {
             this.disassemblyError = "Failed to disassemble: \n" + this.compileError;
             this.dispatchEvent(new Event('disassembly'))
             return;
         }
         try {
-            this.disassembled = disassemble(this.compiled)
+            this.disassembled = disassemble(this.compiled) as string[]
             this.disassemblyError = null;
         } catch(e) {
             if(typeof e == 'string') {
@@ -100,12 +105,27 @@ export class App extends EventTarget {
     resetCpu() {
         if(!this.compileError) {
             this.exec.reset(this.compiled)
+            this.execRegisters = this.exec.get_registers()
+            this.execPC = this.execRegisters.pc
             this.dispatchEvent(new Event('exec'))   
         }
     }
 
     stepCpu() {
-        this.exec.step()
+        if(this.exec.keep_running()) {
+            this.exec.step()
+            this.execRegisters = this.exec.get_registers()
+            this.execPC = this.execRegisters.pc
+        }
+        
+        this.dispatchEvent(new Event('exec'))
+    }
+
+    setCpuRegister(reg: number, val: number) {
+        this.exec.set_register(reg, val)
+        this.execRegisters = this.exec.get_registers()
+        this.execPC = this.execRegisters.pc
+
         this.dispatchEvent(new Event('exec'))
     }
 }

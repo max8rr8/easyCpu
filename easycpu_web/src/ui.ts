@@ -1,5 +1,4 @@
 import { App } from './app'
-import { RegistersState } from 'easycpu_wasm'
 
 class ProgramInput {
     el: HTMLTextAreaElement
@@ -37,18 +36,36 @@ class DisassemblyOutput {
         this.el.className = "disasmOutput"
 
         this.app.addEventListener('disassembly', () => this.update())
+        this.app.addEventListener('exec', () => this.updateExec())
+
         this.update()
+        this.updateExec()
     }
 
     update() {
         this.el.classList.remove('disassemblyError')
+        this.el.innerHTML = ''
 
         if(this.app.disassemblyError) {
             this.el.classList.add('disassemblyError')
             this.el.innerText = this.app.disassemblyError
         } else {
-            this.el.innerText =  this.app.disassembled
+            this.el.append(...this.app.disassembled.map(dis=>{
+                let line = document.createElement('pre')
+                line.className = 'codeLine'
+                line.innerText = dis
+                return line
+            }))
         }
+    }
+
+    updateExec() {
+        console.log("exec", this.app.execPC);
+
+        [...this.el.querySelectorAll('.curExec')].forEach(e=>e.classList.remove('curExec'))
+        if(this.app.execPC > this.el.childNodes.length) return;
+        let curExecLine = this.el.childNodes[this.app.execPC] as HTMLPreElement
+        curExecLine.classList.add('curExec')
     }
 }
 
@@ -60,9 +77,10 @@ class CpuExecOutput {
     regsiterTable: HTMLTableElement
     app: App
 
-    regCells: {[a in string]: HTMLTableCellElement}
+    regCells: (HTMLInputElement | null)[]
 
     stepBtn: HTMLButtonElement
+    resetBtn: HTMLButtonElement
     
     constructor(app: App) {
         this.app = app
@@ -72,24 +90,11 @@ class CpuExecOutput {
 
         this.regsiterTable = document.createElement('table')
         this.regsiterTable.className = 'registerTable'
-        this.regCells = {}
+        this.regCells = Array.from({ length: 8 }, () => null)
         for(let i = 0; i < 4; i++) {
             const row = document.createElement('tr')
 
-            const regCellNameA = document.createElement('td')
-            regCellNameA.innerText = REGISTER_NAMES[i]
-            const regCellValA = document.createElement('td')
-            regCellValA.innerText = '0x0000'
-            this.regCells[REGISTER_NAMES[i]] = regCellValA;
-
-            
-            const regCellNameB = document.createElement('td')
-            regCellNameB.innerText = REGISTER_NAMES[4 + i]
-            const regCellValB = document.createElement('td')
-            regCellValB.innerText = '0x0000'
-            this.regCells[REGISTER_NAMES[4 + i]] = regCellValB;
-
-            row.append(regCellNameA, regCellValA, regCellNameB, regCellValB)
+            row.append(...this.initRegInTable(i), ...this.initRegInTable(i+4))
             this.regsiterTable.append(row)
         }
 
@@ -97,21 +102,46 @@ class CpuExecOutput {
         this.stepBtn.innerText = 'Step'
         this.stepBtn.onclick = () => this.app.stepCpu()
 
-        this.el.append(this.stepBtn, this.regsiterTable)
+        
+        this.resetBtn = document.createElement('button')
+        this.resetBtn.innerText = 'Reset'
+        this.resetBtn.onclick = () => this.app.resetCpu()
+
+        this.el.append(this.stepBtn, this.resetBtn, this.regsiterTable)
 
         this.app.addEventListener('exec', () => this.update())
         this.update()
     }
 
+    initRegInTable(i: number): HTMLElement[] {
+        const regCellName = document.createElement('td')
+        regCellName.innerText = REGISTER_NAMES[i]
+
+        const regCellInput = document.createElement('input')
+        regCellInput.value = '0x0000'
+        regCellInput.addEventListener('change', () => {
+            this.app.setCpuRegister(i, parseInt(regCellInput.value))
+        })
+
+        this.regCells[i] = regCellInput
+
+        const regCellVal = document.createElement('td')
+        regCellVal.append(regCellInput)
+        
+        return [regCellName, regCellVal]
+    }
+
     update() {
         const registers = this.app.exec.get_registers()
-        this.regCells["PC"].innerText = '0x' + registers.pc.toString(16).padStart(4, '0');
-        this.regCells["R2"].innerText = '0x' + registers.r2.toString(16).padStart(4, '0');
-        this.regCells["R3"].innerText = '0x' + registers.r3.toString(16).padStart(4, '0');
-        this.regCells["R4"].innerText = '0x' + registers.r4.toString(16).padStart(4, '0');
-        this.regCells["R5"].innerText = '0x' + registers.r5.toString(16).padStart(4, '0');
-        this.regCells["SP"].innerText = '0x' + registers.sp.toString(16).padStart(4, '0');
-        this.regCells["LP"].innerText = '0x' + registers.lp.toString(16).padStart(4, '0');
+        this.regCells[1]!.value = '0x' + registers.pc.toString(16).padStart(4, '0');
+        this.regCells[2]!.value = '0x' + registers.r2.toString(16).padStart(4, '0');
+        this.regCells[3]!.value = '0x' + registers.r3.toString(16).padStart(4, '0');
+        this.regCells[4]!.value = '0x' + registers.r4.toString(16).padStart(4, '0');
+        this.regCells[5]!.value = '0x' + registers.r5.toString(16).padStart(4, '0');
+        this.regCells[6]!.value = '0x' + registers.sp.toString(16).padStart(4, '0');
+        this.regCells[7]!.value = '0x' + registers.lp.toString(16).padStart(4, '0');
+
+        this.stepBtn.disabled = !this.app.exec.keep_running();
     }
 }
 

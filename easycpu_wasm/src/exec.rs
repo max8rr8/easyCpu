@@ -42,8 +42,16 @@ impl DebugCpu {
             lp: self.cpu.get_reg(cpu::Register::LP),
         }
     }
+
+    pub fn set_register(&mut self, reg: u16, val: u16) {
+        self.cpu.set_reg(cpu::Register::from(reg), val)
+    }
     
     pub fn step(&mut self) {
         self.cpu.exec_next();
+    }
+
+    pub fn keep_running(&mut self) -> bool {
+        self.cpu.get_mem(0xffff) != 0
     }
 }

@@ -140,6 +140,7 @@ name = "easycpu_wasm"
 version = "0.1.0"
 dependencies = [
  "easycpu_lib",
+ "js-sys",
  "wasm-bindgen",
 ]
 
@@ -197,6 +198,15 @@ dependencies = [
  "io-lifetimes",
  "rustix",
  "windows-sys",
+]
+
+[[package]]
+name = "js-sys"
+version = "0.3.63"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2f37a4a5928311ac501dee68b3c7613a1037d0edb30c8e5427bd832d55d1b790"
+dependencies = [
+ "wasm-bindgen",
 ]
 
 [[package]]

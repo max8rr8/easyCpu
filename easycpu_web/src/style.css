@@ -3,6 +3,10 @@
   flex-direction: row;
 }
 
+.mainArea > * {
+  flex: 1
+}
+
 .asmInput, .disasmOutput {
   margin: 20px;
   border: black 2px solid;
@@ -13,4 +17,12 @@
 
 .disassemblyError {
   background: rgba(255, 0, 0, 0.2);
+}
+
+.codeLine {
+  margin: 2px;
+}
+
+.curExec {
+  background-color: rgba(255, 128, 0, 0.4);
 }

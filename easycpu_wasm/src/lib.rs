@@ -52,10 +52,11 @@ pub fn compile(listing: &str) -> Result<Vec<u16>, String> {
 }
 
 #[wasm_bindgen]
-pub fn disassemble(assembled: Vec<u16>) -> Result<String, String> {
-    let dissassembled: Vec<String> = assembled.into_iter()
+pub fn disassemble(assembled: Vec<u16>) -> Result<JsValue, String> {
+    let dissassembled: js_sys::Array = assembled.into_iter()
         .map(cpu::Instruction::decode)
         .map(asm::disasm::disassemle_instruction)
+        .map(JsValue::from)
         .collect();
-    Ok(dissassembled.join("\n"))
+    Ok(dissassembled.into())
 }
