@@ -1,5 +1,6 @@
 [workspace]
 
+resolver = "2"
 members = [
     "easycpu_lib",
     "easycpu_cli",

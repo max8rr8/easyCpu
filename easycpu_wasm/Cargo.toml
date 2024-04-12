@@ -11,4 +11,4 @@ crate-type = ["cdylib", "rlib"]
 [dependencies]
 wasm-bindgen = { version = "0.2" }
 easycpu_lib = { path = "../easycpu_lib" }
-js-sys = "0.3.63"
+js-sys = "0.3.69"

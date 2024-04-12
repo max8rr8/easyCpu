@@ -3,6 +3,8 @@ use crate::asm::{err::CompileError, inst::Instruction, parse_parts::ParseParts};
 
 use super::inst::CompileContext;
 
+const SHIFT_RANGE: std::ops::RangeInclusive<i8> = -31..=31;
+
 #[derive(Copy, Clone, Debug)]
 pub struct BranchInstruction {
     pub eq: bool,
@@ -18,7 +20,7 @@ impl BranchInstruction {
         cond: cpu::Register,
         shift: i8,
     ) -> Result<BranchInstruction, CompileError> {
-        if (shift < -31) && (shift > 31) {
+        if !SHIFT_RANGE.contains(&shift) {
           return Err(CompileError::ShiftIsTooBig(shift));
         }
 
