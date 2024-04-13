@@ -1,10 +1,10 @@
-use crate::asm::{err::CompileError, inst::Instruction, parse_parts::ParseParts};
+use crate::asm::{err::CompileError, inst::Instruction};
+use crate::parser::{ParsedLabel, ParseParts};
 use crate::cpu::{self};
 
 use super::alu::{AluInstruction, AluOperation};
 use super::inst::{compile_instructions, CompileContext};
 use super::load_const::{LoadConstInstruction, LoadConstOperation};
-use super::parse_parts::ParsedLabel;
 
 #[derive(Clone, Debug)]
 pub struct LoadLabelInstruction {

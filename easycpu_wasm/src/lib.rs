@@ -2,7 +2,7 @@ pub mod exec;
 
 use wasm_bindgen::prelude::*;
 
-use easycpu_lib::{asm, cpu};
+use easycpu_lib::{asm::{self, err::CompileError, parse::{parse_listing, Atom}}, cpu, parser::ParsePosition};
 
 #[wasm_bindgen]
 extern "C" {
@@ -25,23 +25,23 @@ extern "C" {
 
 #[wasm_bindgen]
 pub fn compile(listing: &str) -> Result<Vec<u16>, String> {
-    let program = asm::parse::parse_listing(listing);
+    let program = parse_listing(listing);
     let program = program.map_err(|x| format!("Failed to parse: {:#?}", x))?;
 
-    let mut errors: Vec<(usize, asm::err::CompileError)> = Vec::new();
-    let mut parsed: Vec<asm::parse::Parsed> = Vec::new();
+    let mut errors: Vec<(ParsePosition, ParsePosition, CompileError)> = Vec::new();
+    let mut parsed: Vec<Atom> = Vec::new();
     
-    for line in program {
-        match line.compiled {
+    for atom in program {
+        match atom.compiled {
             Ok(c) => parsed.push(c),
-            Err(e) => errors.push((line.line_number, e)),
+            Err(e) => errors.push((atom.start_pos, atom.end_pos, e)),
         }
     }
 
     if !errors.is_empty() {
         let s: Vec<String> = errors
             .iter()
-            .map(|(line, err)| format!("Line {}: {:#?}", line, err))
+            .map(|(start_pos, _end_pos, err)| format!("Line {}: {:#?}", start_pos, err))
             .collect();
         return Err(s.join("\n"));
     }

@@ -1,7 +1,6 @@
 use crate::{asm::err::CompileError, cpu};
+use crate::asm::inst::CompileContext;
 use std::collections::VecDeque;
-
-use super::inst::CompileContext;
 
 #[derive(Clone, Debug)]
 pub struct ParsedLabel {

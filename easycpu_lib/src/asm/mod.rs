@@ -2,10 +2,7 @@
 
 pub mod err;
 
-mod parse_parts;
-
 pub mod inst;
-pub mod parse;
 pub mod compile;
 
 pub mod alu;
@@ -17,3 +14,4 @@ pub mod jump;
 pub mod stack;
 
 pub mod disasm;
+pub mod parse;

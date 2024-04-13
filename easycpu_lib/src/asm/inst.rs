@@ -1,82 +1,109 @@
+use crate::cpu;
 use std::collections::HashMap;
 use std::fmt;
-use crate::cpu;
 
 use crate::asm::err::CompileError;
 
 pub struct CompileContext<'a> {
-  pub current_pc: u16,
-  pub label_map: &'a HashMap<(usize, &'a String), Option<u16>>,
-  pub scope_stack: &'a Vec<usize>
+    pub current_pc: u16,
+    pub label_map: &'a HashMap<(usize, &'a String), Option<u16>>,
+    pub scope_stack: &'a Vec<usize>,
 }
 
 pub trait Instruction: fmt::Debug {
-  fn compile(&self, ctx: &CompileContext) -> Result<Vec<cpu::Instruction>, CompileError>;
+    fn compile(&self, ctx: &CompileContext) -> Result<Vec<cpu::Instruction>, CompileError>;
 }
 
 #[derive(Copy, Clone, Debug)]
 pub struct CustomInstruction {
-  val: u16
+    val: u16,
 }
 
 impl CustomInstruction {
-  pub fn new(val: u16) -> Self {
-      CustomInstruction { val }
-  }
+    pub fn new(val: u16) -> Self {
+        CustomInstruction { val }
+    }
 }
 
 impl Instruction for CustomInstruction {
-  fn compile(&self, _: &CompileContext) -> Result<Vec<cpu::Instruction>, CompileError> {
-      Ok(vec![
-          cpu::Instruction::CUSTOM(self.val)
-      ])
-  }
-
+    fn compile(&self, _: &CompileContext) -> Result<Vec<cpu::Instruction>, CompileError> {
+        Ok(vec![cpu::Instruction::CUSTOM(self.val)])
+    }
 }
 
 #[derive(Clone, Debug)]
 pub struct CustomMultiInstruction {
-  val: Vec<u16>
+    val: Vec<u16>,
 }
 
 impl CustomMultiInstruction {
-  pub fn new(val: Vec<u16>) -> Self {
-    CustomMultiInstruction { val }
-  }
+    pub fn new(val: Vec<u16>) -> Self {
+        CustomMultiInstruction { val }
+    }
 }
 
 impl Instruction for CustomMultiInstruction {
-  fn compile(&self, _: &CompileContext) -> Result<Vec<cpu::Instruction>, CompileError> {
-      Ok(self.val.iter().map(|x| cpu::Instruction::CUSTOM(*x)).collect())
-  }
-
+    fn compile(&self, _: &CompileContext) -> Result<Vec<cpu::Instruction>, CompileError> {
+        Ok(self
+            .val
+            .iter()
+            .map(|x| cpu::Instruction::CUSTOM(*x))
+            .collect())
+    }
 }
 
+impl From<Vec<char>> for CustomMultiInstruction {
+    fn from(source: Vec<char>) -> Self {
+        let mut val: Vec<u16> = Vec::new();
+        let mut is_special = false;
+        for mut cur in source.into_iter() {
+            if is_special {
+                cur = match cur {
+                    'n' => '\n',
+                    't' => '\t',
+                    '0' => '\0',
+                    _ => cur,
+                };
 
+                is_special = false;
+            } else if cur == '\\' {
+                is_special = true;
+            }
+
+            if !is_special {
+                let mut bu: [u8; 1] = [0];
+                cur.encode_utf8(&mut bu);
+                val.push(bu[0] as u16);
+            }
+        }
+        
+        CustomMultiInstruction { val }
+    }
+}
 
 #[derive(Copy, Clone, Debug)]
-pub struct NopInstruction {
-}
+pub struct NopInstruction {}
 
 #[allow(clippy::new_without_default)]
 impl NopInstruction {
-  pub fn new() -> Self {
-      NopInstruction {  }
-  }
+    pub fn new() -> Self {
+        NopInstruction {}
+    }
 }
 
 impl Instruction for NopInstruction {
-  fn compile(&self, _: &CompileContext) -> Result<Vec<cpu::Instruction>, CompileError> {
-      Ok(vec![
-          cpu::Instruction::NOP
-      ])
-  }
+    fn compile(&self, _: &CompileContext) -> Result<Vec<cpu::Instruction>, CompileError> {
+        Ok(vec![cpu::Instruction::NOP])
+    }
 }
 
-pub fn compile_instructions(instructions: Vec<Box<dyn Instruction>>, ctx: &CompileContext) -> Result<Vec<cpu::Instruction>, CompileError> {
-  let compiled: Result<Vec<_>, _> = instructions.into_iter().map(|x| x.compile(ctx)).collect();
-  let compiled = compiled?;
-  let compiled: Vec<cpu::Instruction> = compiled.into_iter().flatten().collect();
+pub fn compile_instructions(
+    instructions: Vec<Box<dyn Instruction>>,
+    ctx: &CompileContext,
+) -> Result<Vec<cpu::Instruction>, CompileError> {
+    let compiled: Result<Vec<_>, _> = instructions.into_iter().map(|x| x.compile(ctx)).collect();
+    let compiled = compiled?;
+    let compiled: Vec<cpu::Instruction> = compiled.into_iter().flatten().collect();
 
-  Ok(compiled)
+    Ok(compiled)
 }

@@ -1,11 +1,11 @@
-use crate::asm::{err::CompileError, inst::Instruction, parse_parts::ParseParts};
+use crate::asm::{err::CompileError, inst::Instruction};
+use crate::parser::{ParseParts, convert_to_u16};
 use crate::cpu::{self};
 
 use super::alu::{AluInstruction, AluOperation};
 use super::branch::BranchInstruction;
 use super::inst::{compile_instructions, CompileContext, CustomInstruction};
 use super::mem::{MemInstruction, MemOperation};
-use super::parse_parts::convert_to_u16;
 
 #[derive(Copy, Clone, Debug)]
 pub enum LoadConstOperation {

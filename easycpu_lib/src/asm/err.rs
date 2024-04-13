@@ -17,6 +17,7 @@ pub enum CompileError {
     LabelRedefined(String),
 
     UnexpectedEndOfFile,
+    UnexpectedToken(char),
     UnknownToken(char),
     InvalidNumber(String),
 

@@ -3,3 +3,5 @@ obj_dir
 easycpu_toolkit/target
 easycpu_lib/target
 target
+ram.bin
+test.s

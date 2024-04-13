@@ -1,6 +1,6 @@
 use crate::asm::inst::CompileContext;
 use crate::asm::jump::{JumpInstruction, JumpOperation};
-use crate::asm::parse_parts::{ParseParts, ParsedLabel};
+use crate::parser::{ParseParts, ParsedLabel};
 use crate::asm::{err::CompileError, inst::Instruction};
 use crate::cpu::{self};
 

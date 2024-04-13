@@ -1,10 +1,10 @@
 use std::collections::{HashMap, hash_map::Entry};
 
 use crate::{asm::inst::CompileContext, cpu::InstructionError};
+use super::parse::Atom;
+use super::err::CompileError;
 
-use super::{err::CompileError, parse::Parsed};
-
-pub fn compile(parsed: Vec<Parsed>) -> Result<Vec<u16>, CompileError> {
+pub fn compile(parsed: Vec<Atom>) -> Result<Vec<u16>, CompileError> {
     let mut labels: HashMap<(usize, &String), Option<u16>> = HashMap::new();
 
     let mut scope_stack: Vec<usize> = vec![0];
@@ -12,7 +12,7 @@ pub fn compile(parsed: Vec<Parsed>) -> Result<Vec<u16>, CompileError> {
 
     for p in parsed.iter() {
         match p {
-            Parsed::Label(label) => {
+            Atom::Label(label) => {
                 let key = (cur_scope, label);
                 if let Entry::Vacant(e) = labels.entry(key) {
                     e.insert(None);
@@ -21,12 +21,12 @@ pub fn compile(parsed: Vec<Parsed>) -> Result<Vec<u16>, CompileError> {
                 }
             }
 
-            Parsed::EnterLocalScope(id) => {
+            Atom::EnterLocalScope(id) => {
                 scope_stack.push(*id);
                 cur_scope = *id;
             }
 
-            Parsed::LeaveLocalScope => {
+            Atom::LeaveLocalScope => {
                 scope_stack.pop();
                 cur_scope = *scope_stack.last().unwrap_or(&0);
             }
@@ -49,7 +49,7 @@ pub fn compile(parsed: Vec<Parsed>) -> Result<Vec<u16>, CompileError> {
         for p in parsed.iter() {
             let current_pc = compiled.len() as u16;
             match p {
-                Parsed::Instruction(ins) => {
+                Atom::Instruction(ins) => {
                     let c = ins.compile(&CompileContext {
                         current_pc,
                         label_map: &labels,
@@ -61,7 +61,7 @@ pub fn compile(parsed: Vec<Parsed>) -> Result<Vec<u16>, CompileError> {
                     compiled.extend(c);
                 }
 
-                Parsed::Label(label) => {
+                Atom::Label(label) => {
                     let key = (cur_scope, label);
                     let label_value = labels.get(&key).unwrap_or(&None);
                     let should_update = match label_value {
@@ -74,14 +74,14 @@ pub fn compile(parsed: Vec<Parsed>) -> Result<Vec<u16>, CompileError> {
                     }
                 }
 
-                Parsed::Nop => {}
+                Atom::Nop => {}
 
-                Parsed::EnterLocalScope(id) => {
+                Atom::EnterLocalScope(id) => {
                     scope_stack.push(*id);
                     cur_scope = *id;
                 }
 
-                Parsed::LeaveLocalScope => {
+                Atom::LeaveLocalScope => {
                     scope_stack.pop();
                     cur_scope = *scope_stack.last().unwrap_or(&0);
                 }

@@ -1,6 +1,7 @@
 use crate::asm::inst::{compile_instructions, CompileContext};
 use crate::asm::mem::{MemInstruction, MemOperation};
-use crate::asm::{err::CompileError, inst::Instruction, parse_parts::ParseParts};
+use crate::asm::{err::CompileError, inst::Instruction};
+use crate::parser::ParseParts;
 use crate::cpu::{self};
 
 use crate::asm::alu::{AluInstruction, AluOperation};

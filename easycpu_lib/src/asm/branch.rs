@@ -1,5 +1,6 @@
 use crate::cpu;
-use crate::asm::{err::CompileError, inst::Instruction, parse_parts::ParseParts};
+use crate::parser::ParseParts;
+use crate::asm::{err::CompileError, inst::Instruction};
 
 use super::inst::CompileContext;
 

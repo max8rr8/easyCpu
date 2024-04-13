@@ -1,10 +1,14 @@
 mod exec;
 
 use clap::Parser;
+use easycpu_lib::parser::ParsePosition;
 use exec::DebugCpu;
 use std::{fs, io::Write, process::exit};
 
-use easycpu_lib::asm::{compile::compile, disasm::disassemle_instruction, err::CompileError, parse::Parsed, parse::parse_listing};
+use easycpu_lib::asm::{
+    compile::compile, disasm::disassemle_instruction, err::CompileError, parse::parse_listing,
+    parse::Atom,
+};
 use easycpu_lib::cpu::Instruction;
 
 fn compile_file(src: std::path::PathBuf, dst: std::path::PathBuf) -> Result<(), String> {
@@ -14,13 +18,13 @@ fn compile_file(src: std::path::PathBuf, dst: std::path::PathBuf) -> Result<(), 
     let program = parse_listing(contents.as_str());
     let program = program.map_err(|x| format!("Failed to parse: {:#?}", x))?;
 
-    let mut errors: Vec<(usize, CompileError)> = Vec::new();
-    let mut parsed: Vec<Parsed> = Vec::new();
-    
+    let mut errors: Vec<(ParsePosition, CompileError)> = Vec::new();
+    let mut parsed: Vec<Atom> = Vec::new();
+
     for line in program {
         match line.compiled {
             Ok(c) => parsed.push(c),
-            Err(e) => errors.push((line.line_number, e)),
+            Err(e) => errors.push((line.start_pos, e)),
         }
     }
 
@@ -54,7 +58,8 @@ fn load_u16_file(src: std::path::PathBuf) -> Vec<u16> {
 
 fn dissassemle_file(src: std::path::PathBuf) -> Result<(), String> {
     let assembled = load_u16_file(src);
-    let dissassembled: Vec<String> = assembled.into_iter()
+    let dissassembled: Vec<String> = assembled
+        .into_iter()
         .map(Instruction::decode)
         .map(disassemle_instruction)
         .collect();

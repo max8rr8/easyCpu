@@ -2,8 +2,8 @@ use std::collections::HashMap;
 
 use crate::asm::inst::CompileContext;
 use crate::asm::jump::{JumpInstruction, JumpOperation};
-use crate::asm::parse_parts::ParsedLabel;
-use crate::asm::{err::CompileError, inst::Instruction, parse_parts::ParseParts};
+use crate::parser::{ParsedLabel, ParseParts};
+use crate::asm::{err::CompileError, inst::Instruction};
 use crate::cpu::{self};
 
 use super::cons::StackConstInstruction;

@@ -1,4 +1,5 @@
 use crate::cpu::{self};
+use crate::parser::{ParseParts, ParsedLabel};
 
 use super::branch::BranchInstruction;
 use super::err::CompileError;
@@ -6,8 +7,6 @@ use super::inst::CompileContext;
 use super::inst::Instruction;
 use super::load_const::LoadConstInstruction;
 use super::load_const::LoadConstOperation;
-use super::parse_parts::ParseParts;
-use super::parse_parts::ParsedLabel;
 
 #[derive(Copy, Clone, Debug)]
 pub enum JumpOperation {
