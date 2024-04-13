@@ -103,7 +103,7 @@ impl MemInstruction {
 }
 
 impl Instruction for MemInstruction {
-    fn compile(&self, _: &CompileContext) -> Result<Vec<cpu::Instruction>, CompileError> {
+    fn compile(&self, ctx: &mut CompileContext) -> Result<(), CompileError> {
         let (op_hi, op_lo, op_sw) = self.op.get_flags();
         let ins = cpu::MemInstruction {
             dst: self.dst,
@@ -121,6 +121,7 @@ impl Instruction for MemInstruction {
             return Err(CompileError::InvalidInstruction(e));
         }
 
-        Ok(vec![ins])
+        ctx.instruct(ins);
+        Ok(())
     }
 }

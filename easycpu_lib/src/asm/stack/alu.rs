@@ -43,7 +43,7 @@ impl StackAluInstruction {
 }
 
 impl Instruction for StackAluInstruction {
-    fn compile(&self, ctx: &CompileContext) -> Result<Vec<cpu::Instruction>, CompileError> {
+    fn compile(&self, ctx: &mut CompileContext) -> Result<(), CompileError> {
         let mut ins: Vec<Box<dyn Instruction>> = Vec::new();
         
 

@@ -6,7 +6,7 @@ use crate::asm::parse::Atom;
 use crate::compile::CompileError;
 
 pub fn compile(parsed: Vec<Atom>) -> Result<Vec<u16>, CompileError> {
-    let mut labels: HashMap<(usize, &String), Option<u16>> = HashMap::new();
+    let mut labels: HashMap<(usize, String), Option<u16>> = HashMap::new();
 
     let mut scope_stack: Vec<usize> = vec![0];
     let mut cur_scope: usize = 0;
@@ -14,7 +14,7 @@ pub fn compile(parsed: Vec<Atom>) -> Result<Vec<u16>, CompileError> {
     for p in parsed.iter() {
         match p {
             Atom::Label(label) => {
-                let key = (cur_scope, label);
+                let key = (cur_scope, label.to_owned());
                 if let Entry::Vacant(e) = labels.entry(key) {
                     e.insert(None);
                 } else {
@@ -51,19 +51,26 @@ pub fn compile(parsed: Vec<Atom>) -> Result<Vec<u16>, CompileError> {
             let current_pc = compiled.len() as u16;
             match p {
                 Atom::Instruction(ins) => {
-                    let c = ins.compile(&CompileContext {
+                    let mut ctx = CompileContext {
                         current_pc,
-                        label_map: &labels,
-                        scope_stack: &mut scope_stack,
-                    })?;
+                        label_map: labels.clone(),
+                        scope_stack: scope_stack.clone(),
+                        instructions: Vec::new()
+                    };
+
+                    ins.compile(&mut ctx)?;
+                    // let mut c = ins.compile(&mut ctx)?;
+                    // c.extend(ctx.iter());
+
+
                     let c: Result<Vec<_>, InstructionError> =
-                        c.iter().map(|x| x.encode()).collect();
+                        ctx.instructions.iter().map(|x| x.encode()).collect();
                     let c = c.map_err(CompileError::InvalidInstruction)?;
                     compiled.extend(c);
                 }
 
                 Atom::Label(label) => {
-                    let key = (cur_scope, label);
+                    let key = (cur_scope, label.to_owned());
                     let label_value = labels.get(&key).unwrap_or(&None);
                     let should_update = match label_value {
                         None => true,

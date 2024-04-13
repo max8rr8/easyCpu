@@ -65,7 +65,7 @@ impl BranchInstruction {
 }
 
 impl Instruction for BranchInstruction {
-    fn compile(&self, _: &CompileContext) -> Result<Vec<cpu::Instruction>, CompileError> {
+    fn compile(&self, ctx: &mut CompileContext) -> Result<(), CompileError> {
         let ins = cpu::BranchInstruction {
             cond: self.cond,
             shift: self.shift,
@@ -81,6 +81,8 @@ impl Instruction for BranchInstruction {
           return Err(CompileError::InvalidInstruction(e));
         }
 
-        Ok(vec![ins])
+        ctx.instruct(ins);
+
+        Ok(())
     }
 }

@@ -26,30 +26,24 @@ impl StackJumpInstruction {
 }
 
 impl Instruction for StackJumpInstruction {
-    fn compile(&self, ctx: &CompileContext) -> Result<Vec<cpu::Instruction>, CompileError> {
-        let mut ins: Vec<cpu::Instruction> = Vec::new();
-
+    fn compile(&self, ctx: &mut CompileContext) -> Result<(), CompileError> {
         let cond_reg = match self.op {
             JumpOperation::JMP => cpu::Register::ZX,
             _ => {
-                ins.extend(StackBaseInstruction::new(
+                StackBaseInstruction::new(
                     StackBaseOperation::POP,
                     cpu::Register::R2,
-                )?.compile(ctx)?);
+                )?.compile(ctx)?;
                 cpu::Register::R2
             } // (r) => r,
         };
 
-        ins.extend(JumpInstruction::new(
+        JumpInstruction::new(
             self.op,
             self.targ.clone(),
             cond_reg,
-        ).compile(&CompileContext {
-          current_pc: ctx.current_pc + ins.len() as u16,
-          label_map: ctx.label_map,
-          scope_stack: ctx.scope_stack
-        })?);
-       Ok(ins)
+        ).compile(ctx)?;
+       Ok(())
         
     }
 }

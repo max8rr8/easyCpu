@@ -48,7 +48,7 @@ impl StackMemInstruction {
 }
 
 impl Instruction for StackMemInstruction {
-    fn compile(&self, ctx: &CompileContext) -> Result<Vec<cpu::Instruction>, CompileError> {
+    fn compile(&self, ctx: &mut CompileContext) -> Result<(), CompileError> {
         let mut ins: Vec<Box<dyn Instruction>> = Vec::new();
 
         ins.push(Box::new(StackBaseInstruction::new(

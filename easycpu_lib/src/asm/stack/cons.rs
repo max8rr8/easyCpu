@@ -69,7 +69,7 @@ impl StackConstInstruction {
 }
 
 impl Instruction for StackConstInstruction {
-    fn compile(&self, ctx: &CompileContext) -> Result<Vec<cpu::Instruction>, CompileError> {
+    fn compile(&self, ctx: &mut CompileContext) -> Result<(), CompileError> {
         let mut ins: Vec<Box<dyn Instruction>> = Vec::new();
         if matches!(self.val, ConstInternalOp::AConst(_)) {
             ins.push(Box::new(StackBaseInstruction::new(

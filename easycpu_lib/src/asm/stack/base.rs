@@ -59,7 +59,7 @@ impl StackBaseInstruction {
 }
 
 impl Instruction for StackBaseInstruction {
-    fn compile(&self, ctx: &CompileContext) -> Result<Vec<cpu::Instruction>, CompileError> {
+    fn compile(&self, ctx: &mut CompileContext) -> Result<(), CompileError> {
         let ins: Vec<Box<dyn Instruction>> = match self.op {
             StackBaseOperation::INIT => vec![
                 Box::new(LoadConstInstruction::new(

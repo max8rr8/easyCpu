@@ -15,8 +15,9 @@ impl CustomInstruction {
 }
 
 impl Instruction for CustomInstruction {
-    fn compile(&self, _: &CompileContext) -> Result<Vec<cpu::Instruction>, CompileError> {
-        Ok(vec![cpu::Instruction::CUSTOM(self.val)])
+    fn compile(&self, ctx: &mut CompileContext) -> Result<(), CompileError> {
+        ctx.instruct(cpu::Instruction::CUSTOM(self.val));
+        Ok(())
     }
 }
 
@@ -32,12 +33,12 @@ impl CustomMultiInstruction {
 }
 
 impl Instruction for CustomMultiInstruction {
-    fn compile(&self, _: &CompileContext) -> Result<Vec<cpu::Instruction>, CompileError> {
-        Ok(self
-            .val
-            .iter()
-            .map(|x| cpu::Instruction::CUSTOM(*x))
-            .collect())
+    fn compile(&self, ctx: &mut CompileContext) -> Result<(), CompileError> {
+        for v in self.val.iter() {
+          ctx.instruct(cpu::Instruction::CUSTOM(*v));
+        }
+
+        Ok(())
     }
 }
 
@@ -81,7 +82,8 @@ impl NopInstruction {
 }
 
 impl Instruction for NopInstruction {
-    fn compile(&self, _: &CompileContext) -> Result<Vec<cpu::Instruction>, CompileError> {
-        Ok(vec![cpu::Instruction::NOP])
+    fn compile(&self, ctx: &mut CompileContext) -> Result<(), CompileError> {
+        ctx.instruct(cpu::Instruction::NOP);
+        Ok(())
     }
 }

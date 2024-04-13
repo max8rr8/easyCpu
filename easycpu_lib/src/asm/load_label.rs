@@ -30,7 +30,7 @@ impl LoadLabelInstruction {
 }
 
 impl Instruction for LoadLabelInstruction {
-    fn compile(&self, ctx: &CompileContext) -> Result<Vec<cpu::Instruction>, CompileError> {
+    fn compile(&self, ctx: &mut CompileContext) -> Result<(), CompileError> {
         let mut ins: Vec<Box<dyn Instruction>> = Vec::new();
         if self.dst != cpu::Register::PC {
             ins.push(Box::new(AluInstruction::new(

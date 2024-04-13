@@ -8,16 +8,19 @@ pub struct ParsedLabel {
 }
 
 impl ParsedLabel {
-    pub fn resolve(&self, ctx: &CompileContext) -> Result<u16, CompileError> {
+    pub fn resolve(&self, ctx: &mut CompileContext) -> Result<u16, CompileError> {
         let mut label_pos: Option<Option<u16>> = None;
         for scope in ctx.scope_stack.iter().rev() {
-            let pos = ctx.label_map.get(&(*scope, &self.label));
+            let pos = ctx.label_map.get(&(*scope, self.label.to_owned()));
             if let Some(pos) = pos {
                 label_pos = Some(*pos);
                 break;
             }
         }
-        let label_pos = label_pos.ok_or_else(|| CompileError::UnknownLabel(self.label.clone()))?;
+        let label_pos = label_pos.ok_or_else(|| {
+            // dbg!(&ctx.scope_stack);
+            CompileError::UnknownLabel(self.label.clone())
+        })?;
         let label_pos = label_pos.unwrap_or(ctx.current_pc.wrapping_sub(8));
         Ok(label_pos.wrapping_sub(ctx.current_pc))
     }

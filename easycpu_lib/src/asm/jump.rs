@@ -1,4 +1,4 @@
-use crate::cpu::{self};
+use crate::cpu;
 use crate::parser::{ParseParts, ParsedLabel};
 
 use super::branch::BranchInstruction;
@@ -86,7 +86,7 @@ impl JumpInstruction {
 }
 
 impl Instruction for JumpInstruction {
-    fn compile(&self, ctx: &CompileContext) -> Result<Vec<cpu::Instruction>, CompileError> {
+    fn compile(&self, ctx: &mut CompileContext) -> Result<(), CompileError> {
         let (eq, gt, lt) = self.op.get_flags();
         let targ = self.targ.resolve(ctx)?;
 
@@ -98,21 +98,25 @@ impl Instruction for JumpInstruction {
             return branch_ins.compile(ctx);
         }
 
+        let from_pos = ctx.instructions.len() as u16;
+        ctx.instruct(cpu::Instruction::NOP);
+        
         let load_label = LoadConstInstruction::new(
             LoadConstOperation::ADD,
             cpu::Register::PC,
             targ.wrapping_sub(1),
         )?;
-        let load_label = load_label.compile(ctx)?;
+        load_label.compile(ctx)?;
 
-        let mut res: Vec<cpu::Instruction> = Vec::new();
-        {
-            let mut branch_ins = BranchInstruction::new(self.cond, load_label.len() as i8 + 1)?;
-            branch_ins.set_flags(!eq, !gt, !lt);
-            res.extend(branch_ins.compile(ctx)?)
-        }
-        res.extend(load_label);
-        Ok(res)
+        ctx.patch_instruct(from_pos, cpu::Instruction::BRANCH(cpu::BranchInstruction {
+            eq: !eq,
+            gt: !gt,
+            lt: !lt,
+            cond: self.cond,
+            shift: (ctx.instructions.len() as u16 - from_pos) as i8,
+        }));
+
+        Ok(())
         // Err(CompileError::ShiftIsTooBig(0x1f))
     }
 }

@@ -117,7 +117,7 @@ impl LoadConstInstruction {
 }
 
 impl Instruction for LoadConstInstruction {
-    fn compile(&self, ctx: &CompileContext) -> Result<Vec<cpu::Instruction>, CompileError> {
+    fn compile(&self, ctx: &mut CompileContext) -> Result<(), CompileError> {
         let val_neg = u16::MAX.wrapping_sub(self.val).wrapping_add(1);
 
         let (mem_op, src_reg) = match self.op {
@@ -155,7 +155,7 @@ impl Instruction for LoadConstInstruction {
                     Box::new(CustomInstruction::new(val_neg)),
                 ]
             } else if val_neg < 4096 && matches!(self.op, LoadConstOperation::ADD) {
-
+                
                 vec![
                     Box::new(MemInstruction::new(
                         MemOperation::LSUB,

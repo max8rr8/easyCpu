@@ -159,7 +159,7 @@ impl AluInstruction {
 }
 
 impl Instruction for AluInstruction {
-    fn compile(&self, _: &CompileContext) -> Result<Vec<cpu::Instruction>, CompileError> {
+    fn compile(&self, ctx: &mut CompileContext) -> Result<(), CompileError> {
         let (op_x, op_y, op_o) = self.op.get_flags();
 
         let ins = cpu::AluInstruction {
@@ -171,8 +171,8 @@ impl Instruction for AluInstruction {
             no: self.no ^ op_o,
         };
 
-        let ins = self.op.match_instruction(ins);
+        ctx.instruct(self.op.match_instruction(ins));
 
-        Ok(vec![ins])
+        Ok(())
     }
 }

@@ -91,7 +91,7 @@ impl StackLocalInstruction {
 }
 
 impl Instruction for StackLocalInstruction {
-    fn compile(&self, ctx: &CompileContext) -> Result<Vec<cpu::Instruction>, CompileError> {
+    fn compile(&self, ctx: &mut CompileContext) -> Result<(), CompileError> {
         let ins: Vec<Box<dyn Instruction>> = match self.op {
             StackLocalOperation::LOCINIT => vec![
                 Box::new(StackBaseInstruction::new(

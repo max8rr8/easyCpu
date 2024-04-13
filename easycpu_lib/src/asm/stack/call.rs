@@ -1,10 +1,8 @@
-use std::collections::HashMap;
-
-use crate::compile::{CompileContext, Instruction};
 use crate::asm::jump::{JumpInstruction, JumpOperation};
-use crate::parser::{ParsedLabel, ParseParts};
 use crate::compile::CompileError;
+use crate::compile::{CompileContext, Instruction};
 use crate::cpu::{self};
+use crate::parser::{ParseParts, ParsedLabel};
 
 use super::cons::StackConstInstruction;
 
@@ -24,44 +22,43 @@ impl StackCallInstruction {
 }
 
 impl Instruction for StackCallInstruction {
-    fn compile(&self, ctx: &CompileContext) -> Result<Vec<cpu::Instruction>, CompileError> {
+    fn compile(&self, ctx: &mut CompileContext) -> Result<(), CompileError> {
         let retu_label_s = String::from("RET_ADDR");
         let retu_label = ParsedLabel {
             label: retu_label_s.clone(),
         };
 
-        let mut cur_len = 16;
-        let mut cur_hashmap = HashMap::new();
-        let mut ins: Vec<cpu::Instruction> = Vec::new();
+        let mut cur_pc = ctx.current_pc + 8;
         let mut attempts_left = 128;
 
         while attempts_left > 0 {
-            ins.clear();
-            cur_hashmap.insert((0xffff, &retu_label_s), Some(cur_len));
+            let mut cur_hashmap = ctx.label_map.clone();
+            cur_hashmap.insert((0xffff, retu_label_s.clone()), Some(cur_pc));
+            let mut new_stack = ctx.scope_stack.clone();
+            new_stack.push(0xffff);
 
-            ins.extend(
-                StackConstInstruction::new_label(retu_label.clone()).compile(&CompileContext {
-                    current_pc: 0,
-                    label_map: &cur_hashmap,
-                    scope_stack: &vec![0xffff],
-                })?,
-            );
+            let mut localctx = CompileContext {
+                current_pc: ctx.current_pc,
+                label_map: cur_hashmap,
+                scope_stack: new_stack,
+                instructions: Vec::new(),
+            };
 
-            ins.extend(
-                JumpInstruction::new(JumpOperation::JMP, self.targ.clone(), cpu::Register::ZX)
-                    .compile(&CompileContext {
-                        current_pc: ctx.current_pc + ins.len() as u16,
-                        label_map: ctx.label_map,
-                        scope_stack: ctx.scope_stack
-                    })?,
-            );
+            StackConstInstruction::new_label(retu_label.clone()).compile(&mut localctx)?;
+            JumpInstruction::new(JumpOperation::JMP, self.targ.clone(), cpu::Register::ZX)
+                .compile(&mut localctx)?;
 
-            if ins.len() as u16 == cur_len {
-                break;
+            if localctx.current_pc == cur_pc {
+                for ins in localctx.instructions.into_iter() {
+                    ctx.instruct(ins);
+                }
+                
+                return Ok(());
             }
-            cur_len = ins.len() as u16;
+            cur_pc = localctx.current_pc;
             attempts_left -= 1;
         }
-        Ok(ins)
+
+        panic!("Failed to compile return");
     }
 }
