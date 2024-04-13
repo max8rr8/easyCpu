@@ -1,5 +1,5 @@
-use crate::asm::inst::{compile_instructions, CompileContext};
-use crate::asm::{err::CompileError, inst::Instruction};
+use crate::compile::{compile_instructions, CompileContext, Instruction};
+use crate::compile::CompileError;
 use crate::cpu::{self};
 
 use crate::asm::mem::{MemInstruction, MemOperation};

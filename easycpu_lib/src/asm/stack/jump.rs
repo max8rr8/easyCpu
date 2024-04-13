@@ -1,7 +1,7 @@
-use crate::asm::inst::CompileContext;
+use crate::compile::{CompileContext, Instruction};
 use crate::asm::jump::{JumpInstruction, JumpOperation};
 use crate::parser::{ParseParts, ParsedLabel};
-use crate::asm::{err::CompileError, inst::Instruction};
+use crate::compile::CompileError;
 use crate::cpu::{self};
 
 use super::base::{StackBaseInstruction, StackBaseOperation};

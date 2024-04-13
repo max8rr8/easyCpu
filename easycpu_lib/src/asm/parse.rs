@@ -1,8 +1,9 @@
 use std::collections::VecDeque;
 use std::str::Chars;
 
-use super::inst::{CustomInstruction, CustomMultiInstruction};
-use super::{err::CompileError, inst::Instruction};
+use crate::compile::inst::Instruction;
+use super::custom::{CustomInstruction, CustomMultiInstruction, NopInstruction};
+use crate::compile::CompileError;
 
 use crate::asm::jump::{JumpInstruction, JumpOperation};
 use crate::asm::load_label::LoadLabelInstruction;
@@ -10,7 +11,6 @@ use crate::asm::stack;
 
 use crate::asm::alu::{AluInstruction, AluOperation};
 use crate::asm::branch::BranchInstruction;
-use crate::asm::inst::NopInstruction;
 use crate::asm::load_const::{LoadConstInstruction, LoadConstOperation};
 use crate::asm::mem::{MemInstruction, MemOperation};
 use crate::cpu;

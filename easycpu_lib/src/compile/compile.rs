@@ -1,8 +1,9 @@
 use std::collections::{HashMap, hash_map::Entry};
 
-use crate::{asm::inst::CompileContext, cpu::InstructionError};
-use super::parse::Atom;
-use super::err::CompileError;
+use crate::cpu::InstructionError;
+use crate::compile::CompileContext;
+use crate::asm::parse::Atom;
+use crate::compile::CompileError;
 
 pub fn compile(parsed: Vec<Atom>) -> Result<Vec<u16>, CompileError> {
     let mut labels: HashMap<(usize, &String), Option<u16>> = HashMap::new();

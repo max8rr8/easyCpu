@@ -1,4 +1,4 @@
-use crate::asm::err::CompileError;
+use crate::compile::CompileError;
 use std::iter::Peekable;
 use std::str::Chars;
 

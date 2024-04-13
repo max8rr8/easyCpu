@@ -6,9 +6,10 @@ use exec::DebugCpu;
 use std::{fs, io::Write, process::exit};
 
 use easycpu_lib::asm::{
-    compile::compile, disasm::disassemle_instruction, err::CompileError, parse::parse_listing,
+    disasm::disassemle_instruction, parse::parse_listing,
     parse::Atom,
 };
+use easycpu_lib::compile::{compile::compile, CompileError};
 use easycpu_lib::cpu::Instruction;
 
 fn compile_file(src: std::path::PathBuf, dst: std::path::PathBuf) -> Result<(), String> {

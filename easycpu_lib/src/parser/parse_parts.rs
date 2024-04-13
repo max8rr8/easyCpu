@@ -1,5 +1,5 @@
-use crate::{asm::err::CompileError, cpu};
-use crate::asm::inst::CompileContext;
+use crate::cpu;
+use crate::compile::{CompileContext, CompileError};
 use std::collections::VecDeque;
 
 #[derive(Clone, Debug)]

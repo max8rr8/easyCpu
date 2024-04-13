@@ -2,7 +2,7 @@ pub mod exec;
 
 use wasm_bindgen::prelude::*;
 
-use easycpu_lib::{asm::{self, err::CompileError, parse::{parse_listing, Atom}}, cpu, parser::ParsePosition};
+use easycpu_lib::{asm::{self, parse::{parse_listing, Atom}}, compile::{self, CompileError}, cpu, parser::ParsePosition};
 
 #[wasm_bindgen]
 extern "C" {
@@ -46,7 +46,7 @@ pub fn compile(listing: &str) -> Result<Vec<u16>, String> {
         return Err(s.join("\n"));
     }
 
-    let compiled = asm::compile::compile(parsed).map_err(|e| format!("Error: {:#?}", e))?;
+    let compiled = compile::compile::compile(parsed).map_err(|e| format!("Error: {:#?}", e))?;
 
     Ok(compiled)
 }

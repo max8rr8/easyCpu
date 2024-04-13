@@ -1,9 +1,10 @@
-use crate::asm::{err::CompileError, inst::Instruction};
+use crate::compile::CompileError;
+use crate::compile::inst::compile_instructions;
 use crate::parser::{ParsedLabel, ParseParts};
 use crate::cpu::{self};
 
 use super::alu::{AluInstruction, AluOperation};
-use super::inst::{compile_instructions, CompileContext};
+use crate::compile::{CompileContext, Instruction};
 use super::load_const::{LoadConstInstruction, LoadConstOperation};
 
 #[derive(Clone, Debug)]

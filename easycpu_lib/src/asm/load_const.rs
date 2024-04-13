@@ -1,10 +1,12 @@
-use crate::asm::{err::CompileError, inst::Instruction};
+use crate::asm::custom::CustomInstruction;
+use crate::compile::CompileError;
+use crate::compile::inst::compile_instructions;
 use crate::parser::{ParseParts, convert_to_u16};
 use crate::cpu::{self};
 
 use super::alu::{AluInstruction, AluOperation};
 use super::branch::BranchInstruction;
-use super::inst::{compile_instructions, CompileContext, CustomInstruction};
+use crate::compile::{CompileContext, Instruction};
 use super::mem::{MemInstruction, MemOperation};
 
 #[derive(Copy, Clone, Debug)]

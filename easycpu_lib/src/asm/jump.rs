@@ -2,9 +2,8 @@ use crate::cpu::{self};
 use crate::parser::{ParseParts, ParsedLabel};
 
 use super::branch::BranchInstruction;
-use super::err::CompileError;
-use super::inst::CompileContext;
-use super::inst::Instruction;
+use crate::compile::CompileError;
+use crate::compile::{CompileContext, Instruction};
 use super::load_const::LoadConstInstruction;
 use super::load_const::LoadConstOperation;
 

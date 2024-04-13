@@ -1,6 +1,6 @@
 use std::fmt::Display;
 
-use crate::asm::err::CompileError;
+use crate::compile::CompileError;
 
 
 #[derive(Clone, Copy, Debug, Default)]

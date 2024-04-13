@@ -1,8 +1,8 @@
-use crate::asm::inst::{compile_instructions, CompileContext};
+use crate::compile::{compile_instructions, CompileContext, Instruction};
 use crate::asm::load_const::{LoadConstInstruction, LoadConstOperation};
 use crate::asm::load_label::LoadLabelInstruction;
 use crate::parser::{ParseParts, ParsedLabel};
-use crate::asm::{err::CompileError, inst::Instruction};
+use crate::compile::CompileError;
 use crate::cpu::{self};
 
 use super::base::{StackBaseInstruction, StackBaseOperation};

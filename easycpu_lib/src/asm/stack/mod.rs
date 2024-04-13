@@ -9,11 +9,13 @@ use self::{
     mem::StackMemInstruction,
 };
 
+use crate::compile::CompileError;
+
 use super::{
-    alu::AluOperation, err::CompileError, jump::JumpOperation, mem::MemOperation, parse::Atom
+    alu::AluOperation, jump::JumpOperation, mem::MemOperation, parse::Atom
 };
 
-use crate::parser::{ParseParts};
+use crate::parser::ParseParts;
 
 pub mod alu;
 pub mod base;

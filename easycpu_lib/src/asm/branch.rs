@@ -1,8 +1,7 @@
 use crate::cpu;
 use crate::parser::ParseParts;
-use crate::asm::{err::CompileError, inst::Instruction};
-
-use super::inst::CompileContext;
+use crate::compile::CompileError;
+use crate::compile::{CompileContext, Instruction};
 
 const SHIFT_RANGE: std::ops::RangeInclusive<i8> = -31..=31;
 

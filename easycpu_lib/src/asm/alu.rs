@@ -1,8 +1,8 @@
-use crate::asm::{err::CompileError, inst::Instruction};
+use crate::compile::CompileError;
 use crate::parser::ParseParts;
 use crate::cpu;
 
-use super::inst::CompileContext;
+use crate::compile::{CompileContext, Instruction};
 
 #[derive(Copy, Clone, Debug)]
 pub enum AluOperation {
