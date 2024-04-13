@@ -47,8 +47,8 @@ module mem(
     cur_out_pos = 0;
     write_out_pos = 0;
     
-    serial_inp_buf = 128'0;
-    serial_out_buf = 128'0;
+    serial_inp_buf = 0;
+    serial_out_buf = 0;
   end
 
 
