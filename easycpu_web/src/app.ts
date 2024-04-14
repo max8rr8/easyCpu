@@ -1,6 +1,5 @@
 import { compile, disassemble, DebugCpu } from 'easycpu_wasm'
-import { RegistersState } from 'easycpu_wasm'
-
+import { RegistersState, CompileError } from 'easycpu_wasm'
 
 const DEFAULT_PROGRAM = `
 LCONST r2 0b1101	#	Operand	1
@@ -25,7 +24,7 @@ HALT
 export class App extends EventTarget {
     program: string
 
-    compileError: string | null
+    compileError: CompileError[] | null
     compiled: Uint16Array
 
     disassemblyError: string | null
@@ -36,7 +35,7 @@ export class App extends EventTarget {
     execPC: number
 
     constructor() {
-        super();
+        super()
 
         this.program = ''
 
@@ -62,18 +61,35 @@ export class App extends EventTarget {
         this.dispatchEvent(new Event('programUpdate'))
     }
 
+    get compileErrorFormatted(): string | null {
+        if (this.compileError === null) return null
+
+        return (
+            'Failed to compile\n\n' +
+            this.compileError
+                .map((e) => {
+                    const line = e.start.line
+                    const col = e.start.column
+                    const msg = e.get_message()
+                    return `Error at ${line}:${col}: ${msg}`
+                })
+                .join('\n\n')
+        )
+    }
+
     recompile() {
-        this.compileError = "Failed to compile"
+        this.compileError = []
         this.compiled = new Uint16Array()
         try {
             this.compiled = compile(this.program)
-            this.compileError = null;
-        } catch(e) {
-            console.log("Failed compilation", e)
-            if(typeof e == 'string') {
-                this.compileError = "Failed to compile: \n" + e
+            this.compileError = null
+        } catch (e) {
+            console.log('Failed compilation', e)
+
+            if (e instanceof Array) {
+                this.compileError = e as CompileError[]
             } else {
-                console.error("Critical compile error: ", e)
+                console.error('Critical compile error: ', e)
             }
         }
 
@@ -82,19 +98,20 @@ export class App extends EventTarget {
 
     disassemble() {
         this.disassembled = []
-        if(this.compileError) {
-            this.disassemblyError = "Failed to disassemble: \n" + this.compileError;
+        if (this.compileError) {
+            this.disassemblyError =
+                'Failed to disassemble: \n\n' + this.compileErrorFormatted
             this.dispatchEvent(new Event('disassembly'))
-            return;
+            return
         }
         try {
             this.disassembled = disassemble(this.compiled) as string[]
-            this.disassemblyError = null;
-        } catch(e) {
-            if(typeof e == 'string') {
-                this.disassemblyError = "Failed to disassemble: \n" + e
+            this.disassemblyError = null
+        } catch (e) {
+            if (typeof e == 'string') {
+                this.disassemblyError = 'Failed to disassemble: \n' + e
             } else {
-                console.error("Critical disassembly error: ", e)
+                console.error('Critical disassembly error: ', e)
             }
         }
 
@@ -102,21 +119,21 @@ export class App extends EventTarget {
     }
 
     resetCpu() {
-        if(!this.compileError) {
+        if (!this.compileError) {
             this.exec.reset(this.compiled)
             this.execRegisters = this.exec.get_registers()
             this.execPC = this.execRegisters.pc
-            this.dispatchEvent(new Event('exec'))   
+            this.dispatchEvent(new Event('exec'))
         }
     }
 
     stepCpu() {
-        if(this.exec.keep_running()) {
+        if (this.exec.keep_running()) {
             this.exec.step()
             this.execRegisters = this.exec.get_registers()
             this.execPC = this.execRegisters.pc
         }
-        
+
         this.dispatchEvent(new Event('exec'))
     }
 

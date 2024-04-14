@@ -1,9 +1,10 @@
+pub mod compile;
 pub mod exec;
 
 use wasm_bindgen::prelude::*;
 
 use easycpu_lib::{
-    asm::{self, parse_and_compile},
+    asm::{self},
     cpu,
 };
 
@@ -23,16 +24,6 @@ extern "C" {
     // Multiple arguments too!
     #[wasm_bindgen(js_namespace = console, js_name = log)]
     fn log_many(a: &str, b: &str);
-}
-
-#[wasm_bindgen]
-pub fn compile(source: &str) -> Result<Vec<u16>, String> {
-    parse_and_compile(source).map_err(|errs| {
-        errs.into_iter()
-            .map(|e| format!("{}: {:#?}", e.start_pos, e.error))
-            .collect::<Vec<String>>()
-            .join(", ")
-    })
 }
 
 #[wasm_bindgen]

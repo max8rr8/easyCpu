@@ -1,5 +1,5 @@
 import { App } from '../app'
-import { editor, languages, Range } from 'monaco-editor'
+import { editor, languages, MarkerSeverity, Range } from 'monaco-editor'
 
 languages.register({ id: 'easm' })
 
@@ -78,10 +78,33 @@ export class ProgramInput {
         }
       }
     })
+
+    this.app.addEventListener('compile', () => this.updateMarkers());
   }
 
   get rootHtmlElement() {
     return this.el
+  }
+
+  updateMarkers() {
+    const model = this.editor.getModel();
+    if(!model) return;
+    
+    let markers: editor.IMarkerData[] = [];
+    const errors = this.app.compileError;
+    if(errors) {
+      for(let err of errors) {
+        markers.push({
+          message: err.get_message(),
+          severity: MarkerSeverity.Error,
+          startLineNumber: err.start.line,
+          startColumn: err.start.column,
+          endLineNumber: err.end.line,
+          endColumn: err.end.column,
+        })
+      }
+    }
+    editor.setModelMarkers(model, "owner", markers);
   }
 }
 
