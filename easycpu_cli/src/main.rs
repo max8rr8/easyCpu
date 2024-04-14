@@ -1,52 +1,33 @@
 mod exec;
 
 use clap::Parser;
-use easycpu_lib::parser::ParsePosition;
 use exec::DebugCpu;
 use std::{fs, io::Write, process::exit};
 
-use easycpu_lib::asm::{
-    disasm::disassemle_instruction, parse::parse_listing,
-    parse::Atom,
-};
-use easycpu_lib::compile::{compile::compile, CompileError};
+use easycpu_lib::asm::{disasm::disassemle_instruction, parse_and_compile};
 use easycpu_lib::cpu::Instruction;
 
 fn compile_file(src: std::path::PathBuf, dst: std::path::PathBuf) -> Result<(), String> {
-    let contents =
+    let source =
         fs::read_to_string(&src).map_err(|e| format!("Failed to read file {:#?}: {}", src, e))?;
 
-    let program = parse_listing(contents.as_str());
-    let program = program.map_err(|x| format!("Failed to parse: {:#?}", x))?;
+    match parse_and_compile(&source) {
+        Ok(compiled) => {
+            let bytes: Vec<_> = compiled.iter().flat_map(|x| x.to_be_bytes()).collect();
+            let mut file = fs::File::create(&dst)
+                .map_err(|e| format!("Failed to create file {:#?}: {}", dst, e))?;
+            // Write a slice of bytes to the file
+            file.write_all(&bytes)
+                .map_err(|e| format!("Failed to write file {:#?}: {}", dst, e))?;
 
-    let mut errors: Vec<(ParsePosition, CompileError)> = Vec::new();
-    let mut parsed: Vec<Atom> = Vec::new();
-
-    for line in program {
-        match line.compiled {
-            Ok(c) => parsed.push(c),
-            Err(e) => errors.push((line.start_pos, e)),
+            Ok(())
         }
+        Err(errs) => Err(errs
+            .into_iter()
+            .map(|e| format!("Error at {}: {:#?}", e.start_pos, e.error))
+            .collect::<Vec<String>>()
+            .join("\n")),
     }
-
-    if !errors.is_empty() {
-        let s: Vec<String> = errors
-            .iter()
-            .map(|(line, err)| format!("Line {}: {:#?}", line, err))
-            .collect();
-        return Err(s.join("\n"));
-    }
-
-    let compiled = compile(parsed).map_err(|e| format!("Error: {:#?}", e))?;
-    let bytes: Vec<_> = compiled.iter().flat_map(|x| x.to_be_bytes()).collect();
-    {
-        let mut file = fs::File::create(&dst)
-            .map_err(|e| format!("Failed to create file {:#?}: {}", dst, e))?;
-        // Write a slice of bytes to the file
-        file.write_all(&bytes)
-            .map_err(|e| format!("Failed to write file {:#?}: {}", dst, e))?;
-    }
-    Ok(())
 }
 
 fn load_u16_file(src: std::path::PathBuf) -> Vec<u16> {

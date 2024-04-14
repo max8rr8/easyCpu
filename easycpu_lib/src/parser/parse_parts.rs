@@ -9,6 +9,10 @@ pub struct ParsedLabel {
 
 impl ParsedLabel {
     pub fn resolve(&self, ctx: &mut CompileContext) -> Result<u16, CompileError> {
+        if ctx.resolving_labels {
+            return Ok(ctx.current_pc.wrapping_add(1024));
+        }
+
         let mut label_pos: Option<Option<u16>> = None;
         for scope in ctx.scope_stack.iter().rev() {
             let pos = ctx.label_map.get(&(*scope, self.label.to_owned()));

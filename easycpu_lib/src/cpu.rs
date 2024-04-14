@@ -87,7 +87,7 @@ pub enum Instruction {
     CUSTOM(u16),
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum InstructionError {
     InvalidShift,
 }

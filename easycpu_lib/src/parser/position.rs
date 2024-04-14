@@ -1,7 +1,6 @@
 use std::fmt::Display;
 
-use crate::compile::CompileError;
-
+use crate::compile::{AtomBox, CompileError, Instruction};
 
 #[derive(Clone, Copy, Debug, Default)]
 pub struct ParsePosition {
@@ -34,28 +33,60 @@ impl Display for ParsePosition {
 pub struct PosCompileError {
     pub error: CompileError,
     pub start_pos: ParsePosition,
-    pub end_pos: ParsePosition
+    pub end_pos: ParsePosition,
 }
 
 pub trait CompileErrorWithPos {
-  fn with_pos(self, pos: ParsePosition) -> PosCompileError;
-  fn with_range(self, start: ParsePosition, end: ParsePosition) -> PosCompileError;
+    fn with_pos(self, pos: ParsePosition) -> PosCompileError;
+    fn with_range(self, start: ParsePosition, end: ParsePosition) -> PosCompileError;
 }
 
 impl CompileErrorWithPos for CompileError {
-  fn with_pos(self, pos: ParsePosition) -> PosCompileError {
-    PosCompileError { 
-      error: self,
-      start_pos: pos,
-      end_pos: pos,
+    fn with_pos(self, pos: ParsePosition) -> PosCompileError {
+        PosCompileError {
+            error: self,
+            start_pos: pos,
+            end_pos: pos,
+        }
     }
-  }
 
-  fn with_range(self, start: ParsePosition, end: ParsePosition) -> PosCompileError {
-    PosCompileError { 
-      error: self,
-      start_pos: start,
-      end_pos: end,
+    fn with_range(self, start: ParsePosition, end: ParsePosition) -> PosCompileError {
+        PosCompileError {
+            error: self,
+            start_pos: start,
+            end_pos: end,
+        }
     }
-  }
+}
+
+#[derive(Debug)]
+pub struct PositionAtom {
+    atom: AtomBox,
+    start_pos: ParsePosition,
+    end_pos: ParsePosition,
+}
+
+impl PositionAtom {
+    pub fn new(atom: AtomBox, start_pos: ParsePosition, end_pos: ParsePosition) -> Self {
+        PositionAtom {
+            atom,
+            start_pos,
+            end_pos,
+        }
+    }
+}
+
+impl Instruction for PositionAtom {
+    fn compile(&self, ctx: &mut crate::compile::CompileContext) -> Result<(), CompileError> {
+        // Act as an error boundary
+        if let Err(error) = self.atom.compile(ctx) {
+          ctx.errors.push(PosCompileError {
+            error,
+            start_pos: self.start_pos,
+            end_pos: self.end_pos
+          })
+        }
+
+        Ok(())
+    }
 }

@@ -1,9 +1,9 @@
 use std::collections::VecDeque;
 use std::str::Chars;
 
-use crate::compile::inst::Instruction;
 use super::custom::{CustomInstruction, CustomMultiInstruction, NopInstruction};
-use crate::compile::CompileError;
+use crate::compile::label::LabelScope;
+use crate::compile::{AtomBox, CompileError, ErrorAtom, Label};
 
 use crate::asm::jump::{JumpInstruction, JumpOperation};
 use crate::asm::load_label::LoadLabelInstruction;
@@ -15,11 +15,10 @@ use crate::asm::load_const::{LoadConstInstruction, LoadConstOperation};
 use crate::asm::mem::{MemInstruction, MemOperation};
 use crate::cpu;
 use crate::parser::parse::{end_checker, letter_checker, nummeric_checker};
-use crate::parser::position::PosCompileError;
-use crate::parser::{parse_parts, ParseParts};
-use crate::parser::{ParsePosition, ParseReader};
+use crate::parser::position::{PosCompileError, PositionAtom};
+use crate::parser::{parse_parts, ParseParts, ParseReader};
 
-fn parse_instruction(s: String) -> Result<Atom, CompileError> {
+fn parse_instruction(s: String) -> Result<AtomBox, CompileError> {
     let s = s.to_uppercase();
     let mut parts: ParseParts = s.split_whitespace().collect::<VecDeque<&str>>().into();
 
@@ -33,27 +32,27 @@ fn parse_instruction(s: String) -> Result<Atom, CompileError> {
 
     if command_pure == "NOP" {
         let ins = NopInstruction::new();
-        return Ok(Atom::Instruction(Box::new(ins)));
+        return Ok(Box::new(ins));
     }
 
     if let Some(alu_op) = AluOperation::parse_operation(command_pure) {
         let ins = AluInstruction::parse_asm(alu_op, command_flags, parts)?;
-        return Ok(Atom::Instruction(Box::new(ins)));
+        return Ok(Box::new(ins));
     };
 
     if let Some(mem_op) = MemOperation::parse_operation(command_pure) {
         let ins = MemInstruction::parse_asm(mem_op, command_flags, parts)?;
-        return Ok(Atom::Instruction(Box::new(ins)));
+        return Ok(Box::new(ins));
     };
 
     if command_pure == "BRANCH" {
         let ins = BranchInstruction::parse_asm(command_flags, parts)?;
-        return Ok(Atom::Instruction(Box::new(ins)));
+        return Ok(Box::new(ins));
     }
 
     if let Some(op) = LoadConstOperation::parse_operation(command_pure) {
         let ins = LoadConstInstruction::parse_asm(op, parts)?;
-        return Ok(Atom::Instruction(Box::new(ins)));
+        return Ok(Box::new(ins));
     }
 
     if command_pure == "HALT" {
@@ -63,17 +62,17 @@ fn parse_instruction(s: String) -> Result<Atom, CompileError> {
             cpu::Register::ZX,
             -1,
         )?;
-        return Ok(Atom::Instruction(Box::new(ins)));
+        return Ok(Box::new(ins));
     }
 
     if command_pure == "LLABEL" {
         let ins = LoadLabelInstruction::parse_asm(parts)?;
-        return Ok(Atom::Instruction(Box::new(ins)));
+        return Ok(Box::new(ins));
     }
 
     if let Some(op) = JumpOperation::parse_operation(command_pure) {
         let ins = JumpInstruction::parse_asm(op, parts)?;
-        return Ok(Atom::Instruction(Box::new(ins)));
+        return Ok(Box::new(ins));
     }
 
     if let Some(stripped_cmd) = command_pure.strip_prefix('$') {
@@ -83,32 +82,9 @@ fn parse_instruction(s: String) -> Result<Atom, CompileError> {
     Err(CompileError::UnknownCommand(String::from(command_pure)))
 }
 
-#[derive(Debug)]
-pub enum Atom {
-    Instruction(Box<dyn Instruction>),
-    Label(String),
-
-    EnterLocalScope(usize),
-    LeaveLocalScope,
-
-    Nop,
-}
-
-#[derive(Debug)]
-pub struct FullAtom {
-    pub start_pos: ParsePosition,
-    pub end_pos: ParsePosition,
-    pub compiled: Result<Atom, CompileError>,
-}
-
-#[derive(Debug)]
-pub struct Program {
-    pub lines: Vec<FullAtom>,
-}
-
 struct AsmParse<'a> {
     reader: ParseReader<'a>,
-    atoms: Vec<FullAtom>,
+    atoms: Vec<AtomBox>,
     current_scope: usize,
 }
 
@@ -145,7 +121,7 @@ impl<'a> AsmParse<'a> {
         }
     }
 
-    fn take_parse_block(&mut self) -> Result<Vec<FullAtom>, PosCompileError> {
+    fn take_parse_block(&mut self) -> Result<Vec<AtomBox>, PosCompileError> {
         let start_pos = self.reader.pos;
         let combined: Vec<char> = self.reader.take_block()?;
         let mut combined = combined.into_iter();
@@ -174,7 +150,7 @@ impl<'a> AsmParse<'a> {
                 let collected: String = collected.into_iter().collect();
 
                 Some(if let Some(pure_label) = collected.strip_suffix(':') {
-                    Ok(Atom::Label(String::from(pure_label)))
+                    Ok(Box::new(Label::new(pure_label.to_owned())) as AtomBox)
                 } else {
                     parse_instruction(collected)
                 })
@@ -190,35 +166,23 @@ impl<'a> AsmParse<'a> {
 
                 let collected: String = collected.into_iter().collect();
                 Some(
-                    parse_parts::parse_u16_constant(collected.to_uppercase().as_str()).map(|val| {
-                        let ins = Box::new(CustomInstruction::new(val));
-                        Atom::Instruction(ins)
-                    }),
+                    parse_parts::parse_u16_constant(collected.to_uppercase().as_str())
+                        .map(|val| Box::new(CustomInstruction::new(val)) as AtomBox),
                 )
             }
             AsmStartToken::String => {
                 let chars = self.reader.take_block()?;
                 let ins = Box::new(CustomMultiInstruction::from(chars));
 
-                Some(Ok(Atom::Instruction(ins)))
+                Some(Ok(ins as AtomBox))
             }
             AsmStartToken::CurlyBracket => {
-                let mut block = self.take_parse_block()?;
-                
-                self.current_scope += 1;
-                self.atoms.push(FullAtom {
-                    start_pos,
-                    end_pos: start_pos,
-                    compiled: Ok(Atom::EnterLocalScope(self.current_scope))
-                });
-                self.atoms.append(&mut block);
-                self.atoms.push(FullAtom {
-                    start_pos: self.reader.pos,
-                    end_pos: self.reader.pos,
-                    compiled: Ok(Atom::LeaveLocalScope)
-                });
+                let atoms = self.take_parse_block()?;
 
-                None
+                self.current_scope += 1;
+                Some(Ok(
+                    Box::new(LabelScope::new(self.current_scope, atoms)) as AtomBox
+                ))
             }
             AsmStartToken::Parentheses => {
                 let last_el = self.atoms.pop();
@@ -239,17 +203,20 @@ impl<'a> AsmParse<'a> {
         };
 
         if let Some(atom) = atom {
-            self.atoms.push(FullAtom {
-                start_pos,
-                end_pos: self.reader.pos,
-                compiled: atom
-            })
-        }
+            let atom = match atom {
+                Ok(atom) => atom,
+                Err(err) => Box::new(ErrorAtom::from(err)),
+            };
 
+            self.atoms.push(Box::new(PositionAtom::new(
+                atom,
+                start_pos,
+                self.reader.pos,
+            )))
+        }
 
         Ok(())
     }
-
 
     pub fn parse(&mut self) -> Result<(), PosCompileError> {
         while !self.reader.is_empty() {
@@ -259,7 +226,7 @@ impl<'a> AsmParse<'a> {
         Ok(())
     }
 
-    pub fn atoms(mut self) -> Result<Vec<FullAtom>, PosCompileError> {
+    pub fn atoms(mut self) -> Result<Vec<AtomBox>, PosCompileError> {
         self.parse()?;
         Ok(self.atoms)
     }
@@ -276,7 +243,7 @@ impl<'a> From<&'a mut Chars<'a>> for AsmParse<'a> {
     }
 }
 
-pub fn parse_listing(inp: &str) -> Result<Vec<FullAtom>, PosCompileError> {
+pub fn parse_listing(inp: &str) -> Result<Vec<AtomBox>, PosCompileError> {
     let mut c = inp.chars();
     let parser = AsmParse::from(&mut c);
     parser.atoms()

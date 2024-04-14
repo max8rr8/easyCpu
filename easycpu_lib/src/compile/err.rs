@@ -1,6 +1,6 @@
 use crate::cpu;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum CompileError {
     NotEnoughArguments,
     NoCommandSupplied,
