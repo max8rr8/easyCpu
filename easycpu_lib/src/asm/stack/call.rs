@@ -1,10 +1,9 @@
-use crate::asm::jump::{JumpInstruction, JumpOperation};
+use crate::asm::alu::AluOperation;
+use crate::asm::mem::MemOperation;
 use crate::compile::CompileError;
 use crate::compile::{CompileContext, Instruction};
-use crate::cpu::{self};
+use crate::cpu;
 use crate::parser::{ParseParts, ParsedLabel};
-
-use super::cons::StackConstInstruction;
 
 #[derive(Clone, Debug)]
 pub struct StackCallInstruction {
@@ -23,42 +22,24 @@ impl StackCallInstruction {
 
 impl Instruction for StackCallInstruction {
     fn compile(&self, ctx: &mut CompileContext) -> Result<(), CompileError> {
-        let retu_label_s = String::from("RET_ADDR");
-        let retu_label = ParsedLabel {
-            label: retu_label_s.clone(),
-        };
+        ctx.instruct(AluOperation::INC.instr(
+            cpu::Register::SP,
+            cpu::Register::SP,
+            cpu::Register::ZX,
+        ));
 
-        let mut cur_pc = ctx.current_pc + 8;
-        let mut attempts_left = 128;
+        ctx.instruct(AluOperation::MOV.instr(
+            cpu::Register::R2,
+            cpu::Register::PC,
+            cpu::Register::ZX,
+        ));
+        ctx.instruct(MemOperation::LADD.instr(cpu::Register::R2, cpu::Register::PC, 3)?);
+        ctx.instruct(MemOperation::STORE.instr(cpu::Register::R2, cpu::Register::SP, -1)?);
+        let pos = self.targ.resolve(ctx)?;
+        ctx.instruct(MemOperation::LADD.instr(cpu::Register::PC, cpu::Register::PC, 2)?);
+        ctx.instruct(cpu::Instruction::CUSTOM(6));
+        ctx.instruct(cpu::Instruction::CUSTOM(pos));
 
-        while attempts_left > 0 {
-            let mut cur_hashmap = ctx.label_map.clone();
-            cur_hashmap.insert((0xffff, retu_label_s.clone()), Some(cur_pc));
-            let mut new_stack = ctx.scope_stack.clone();
-            new_stack.push(0xffff);
-
-            let mut localctx = CompileContext {
-                current_pc: ctx.current_pc,
-                label_map: cur_hashmap,
-                scope_stack: new_stack,
-                instructions: Vec::new(),
-            };
-
-            StackConstInstruction::new_label(retu_label.clone()).compile(&mut localctx)?;
-            JumpInstruction::new(JumpOperation::JMP, self.targ.clone(), cpu::Register::ZX)
-                .compile(&mut localctx)?;
-
-            if localctx.current_pc == cur_pc {
-                for ins in localctx.instructions.into_iter() {
-                    ctx.instruct(ins);
-                }
-                
-                return Ok(());
-            }
-            cur_pc = localctx.current_pc;
-            attempts_left -= 1;
-        }
-
-        panic!("Failed to compile return");
+        Ok(())
     }
 }

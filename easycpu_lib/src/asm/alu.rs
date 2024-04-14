@@ -100,6 +100,24 @@ impl AluOperation {
             _ => None,
         }
     }
+
+    pub fn instr(&self, dst: cpu::Register, src_a: cpu::Register, src_b: cpu::Register) -> cpu::Instruction {
+        let src_b = match self.get_second_reg(src_a) {
+            Some(second_override) => second_override,
+            None => src_b,
+        };
+        
+        let (op_x, op_y, op_o) = self.get_flags();
+
+        let ins = cpu::AluInstruction {
+            dst, src_a, src_b,
+            nx: op_x,
+            ny: op_y,
+            no: op_o,
+        };
+
+        self.match_instruction(ins)
+    }
 }
 
 impl AluInstruction {

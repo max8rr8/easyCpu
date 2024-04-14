@@ -50,6 +50,25 @@ impl MemOperation {
             MemOperation::LSUB => (false, false, true), // Set flags for sub load
         }
     }
+
+    pub fn instr(&self, dst: cpu::Register, addr: cpu::Register, shift: i8) -> Result<cpu::Instruction, CompileError> {
+        let (op_hi, op_lo, op_sw) = self.get_flags();
+        let ins = cpu::MemInstruction {
+            dst, addr, shift,
+
+            hi: op_hi,
+            lo: op_lo,
+            sw: op_sw,
+        };
+
+        let ins = self.match_instruction(ins);
+
+        if let Err(e) = ins.validate() {
+            return Err(CompileError::InvalidInstruction(e));
+        }
+
+        Ok(ins)
+    }
 }
 
 impl MemInstruction {

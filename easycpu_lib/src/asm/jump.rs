@@ -2,10 +2,9 @@ use crate::cpu;
 use crate::parser::{ParseParts, ParsedLabel};
 
 use super::branch::BranchInstruction;
+use super::mem::MemOperation;
 use crate::compile::CompileError;
 use crate::compile::{CompileContext, Instruction};
-use super::load_const::LoadConstInstruction;
-use super::load_const::LoadConstOperation;
 
 #[derive(Copy, Clone, Debug)]
 pub enum JumpOperation {
@@ -98,25 +97,17 @@ impl Instruction for JumpInstruction {
             return branch_ins.compile(ctx);
         }
 
-        let from_pos = ctx.instructions.len() as u16;
-        ctx.instruct(cpu::Instruction::NOP);
-        
-        let load_label = LoadConstInstruction::new(
-            LoadConstOperation::ADD,
-            cpu::Register::PC,
-            targ.wrapping_sub(1),
-        )?;
-        load_label.compile(ctx)?;
-
-        ctx.patch_instruct(from_pos, cpu::Instruction::BRANCH(cpu::BranchInstruction {
+        ctx.instruct(cpu::Instruction::BRANCH(cpu::BranchInstruction {
             eq: !eq,
             gt: !gt,
             lt: !lt,
             cond: self.cond,
-            shift: (ctx.instructions.len() as u16 - from_pos) as i8,
+            shift: 3,
         }));
 
+        ctx.instruct(MemOperation::LADD.instr(cpu::Register::PC, cpu::Register::PC, 1)?);
+        ctx.instruct(cpu::Instruction::CUSTOM(targ.wrapping_sub(1)));
+
         Ok(())
-        // Err(CompileError::ShiftIsTooBig(0x1f))
     }
 }
