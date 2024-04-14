@@ -1,4 +1,4 @@
-use crate::compile::{compile_instructions, CompileContext, Instruction};
+use crate::compile::{compile_instructions, CompileContext, Atom};
 use crate::compile::CompileError;
 use crate::cpu::{self};
 
@@ -47,9 +47,9 @@ impl StackMemInstruction {
     }
 }
 
-impl Instruction for StackMemInstruction {
+impl Atom for StackMemInstruction {
     fn compile(&self, ctx: &mut CompileContext) -> Result<(), CompileError> {
-        let mut ins: Vec<Box<dyn Instruction>> = Vec::new();
+        let mut ins: Vec<Box<dyn Atom>> = Vec::new();
 
         ins.push(Box::new(StackBaseInstruction::new(
             StackBaseOperation::POP,

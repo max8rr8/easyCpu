@@ -1,7 +1,7 @@
 use crate::cpu;
 use crate::parser::ParseParts;
 use crate::compile::CompileError;
-use crate::compile::{CompileContext, Instruction};
+use crate::compile::{CompileContext, Atom};
 
 const SHIFT_RANGE: std::ops::RangeInclusive<i8> = -31..=31;
 
@@ -64,7 +64,7 @@ impl BranchInstruction {
     }
 }
 
-impl Instruction for BranchInstruction {
+impl Atom for BranchInstruction {
     fn compile(&self, ctx: &mut CompileContext) -> Result<(), CompileError> {
         let ins = cpu::BranchInstruction {
             cond: self.cond,

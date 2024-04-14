@@ -1,7 +1,7 @@
 use crate::asm::alu::AluOperation;
 use crate::asm::mem::MemOperation;
 use crate::compile::CompileError;
-use crate::compile::{CompileContext, Instruction};
+use crate::compile::{CompileContext, Atom};
 use crate::cpu;
 use crate::parser::{ParseParts, ParsedLabel};
 
@@ -20,7 +20,7 @@ impl StackCallInstruction {
     }
 }
 
-impl Instruction for StackCallInstruction {
+impl Atom for StackCallInstruction {
     fn compile(&self, ctx: &mut CompileContext) -> Result<(), CompileError> {
         ctx.instruct(AluOperation::INC.instr(
             cpu::Register::SP,

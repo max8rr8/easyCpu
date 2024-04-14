@@ -1,4 +1,4 @@
-use crate::compile::{compile_instructions, CompileContext, Instruction};
+use crate::compile::{compile_instructions, CompileContext, Atom};
 use crate::asm::mem::{MemInstruction, MemOperation};
 use crate::compile::CompileError;
 use crate::parser::ParseParts;
@@ -66,9 +66,9 @@ impl StackFunctionInstruction {
     }
 }
 
-impl Instruction for StackFunctionInstruction {
+impl Atom for StackFunctionInstruction {
     fn compile(&self, ctx: &mut CompileContext) -> Result<(), CompileError> {
-        let ins: Vec<Box<dyn Instruction>> = match self.op {
+        let ins: Vec<Box<dyn Atom>> = match self.op {
             StackFunctionOperation::INIT => vec![
                 Box::new(LoadConstInstruction::new(
                     LoadConstOperation::LOAD,

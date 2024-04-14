@@ -1,4 +1,4 @@
-use super::{CompileContext, CompileError, Instruction, AtomBox};
+use super::{CompileContext, CompileError, Atom, AtomBox};
 
 #[derive(Debug)]
 pub struct Label {
@@ -11,7 +11,7 @@ impl Label {
     }
 }
 
-impl Instruction for Label {
+impl Atom for Label {
     fn compile(&self, ctx: &mut super::CompileContext) -> Result<(), super::CompileError> {
         ctx.emit_label(&self.name)
     }
@@ -31,7 +31,7 @@ impl LabelScope {
   }
 }
 
-impl Instruction for LabelScope {
+impl Atom for LabelScope {
     fn compile(&self, ctx: &mut CompileContext) -> Result<(), CompileError> {
         ctx.enter_local_scope(self.id);
 

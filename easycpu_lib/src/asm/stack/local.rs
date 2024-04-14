@@ -1,4 +1,4 @@
-use crate::compile::{compile_instructions, CompileContext, Instruction};
+use crate::compile::{compile_instructions, CompileContext, Atom};
 use crate::asm::mem::{MemInstruction, MemOperation};
 use crate::compile::CompileError;
 use crate::parser::ParseParts;
@@ -69,7 +69,7 @@ impl StackLocalInstruction {
     pub fn load_address(
         mode: StackLocalMode,
         idx: u16,
-    ) -> Result<Vec<Box<dyn Instruction>>, CompileError> {
+    ) -> Result<Vec<Box<dyn Atom>>, CompileError> {
         let shift = match mode {
             StackLocalMode::VAR => idx,
             StackLocalMode::ARG => 0u16.wrapping_sub(4).wrapping_sub(idx),
@@ -90,9 +90,9 @@ impl StackLocalInstruction {
     }
 }
 
-impl Instruction for StackLocalInstruction {
+impl Atom for StackLocalInstruction {
     fn compile(&self, ctx: &mut CompileContext) -> Result<(), CompileError> {
-        let ins: Vec<Box<dyn Instruction>> = match self.op {
+        let ins: Vec<Box<dyn Atom>> = match self.op {
             StackLocalOperation::LOCINIT => vec![
                 Box::new(StackBaseInstruction::new(
                     StackBaseOperation::PUSH,

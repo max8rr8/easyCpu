@@ -4,7 +4,7 @@ use crate::parser::{ParseParts, ParsedLabel};
 use super::branch::BranchInstruction;
 use super::mem::MemOperation;
 use crate::compile::CompileError;
-use crate::compile::{CompileContext, Instruction};
+use crate::compile::{CompileContext, Atom};
 
 #[derive(Copy, Clone, Debug)]
 pub enum JumpOperation {
@@ -84,7 +84,7 @@ impl JumpInstruction {
     }
 }
 
-impl Instruction for JumpInstruction {
+impl Atom for JumpInstruction {
     fn compile(&self, ctx: &mut CompileContext) -> Result<(), CompileError> {
         let (eq, gt, lt) = self.op.get_flags();
         let targ = self.targ.resolve(ctx)?;

@@ -1,4 +1,4 @@
-use crate::compile::{CompileContext, Instruction};
+use crate::compile::{CompileContext, Atom};
 use crate::asm::jump::{JumpInstruction, JumpOperation};
 use crate::parser::{ParseParts, ParsedLabel};
 use crate::compile::CompileError;
@@ -25,7 +25,7 @@ impl StackJumpInstruction {
     }
 }
 
-impl Instruction for StackJumpInstruction {
+impl Atom for StackJumpInstruction {
     fn compile(&self, ctx: &mut CompileContext) -> Result<(), CompileError> {
         let cond_reg = match self.op {
             JumpOperation::JMP => cpu::Register::ZX,

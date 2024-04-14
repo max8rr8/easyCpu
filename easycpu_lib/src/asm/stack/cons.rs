@@ -1,4 +1,4 @@
-use crate::compile::{compile_instructions, CompileContext, Instruction};
+use crate::compile::{compile_instructions, CompileContext, Atom};
 use crate::asm::load_const::{LoadConstInstruction, LoadConstOperation};
 use crate::asm::load_label::LoadLabelInstruction;
 use crate::parser::{ParseParts, ParsedLabel};
@@ -68,9 +68,9 @@ impl StackConstInstruction {
     }
 }
 
-impl Instruction for StackConstInstruction {
+impl Atom for StackConstInstruction {
     fn compile(&self, ctx: &mut CompileContext) -> Result<(), CompileError> {
-        let mut ins: Vec<Box<dyn Instruction>> = Vec::new();
+        let mut ins: Vec<Box<dyn Atom>> = Vec::new();
         if matches!(self.val, ConstInternalOp::AConst(_)) {
             ins.push(Box::new(StackBaseInstruction::new(
                 StackBaseOperation::POP,

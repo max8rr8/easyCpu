@@ -1,4 +1,4 @@
-use crate::compile::{compile_instructions, CompileContext, Instruction};
+use crate::compile::{compile_instructions, CompileContext, Atom};
 use crate::compile::CompileError;
 use crate::cpu::{self};
 
@@ -42,9 +42,9 @@ impl StackAluInstruction {
     }
 }
 
-impl Instruction for StackAluInstruction {
+impl Atom for StackAluInstruction {
     fn compile(&self, ctx: &mut CompileContext) -> Result<(), CompileError> {
-        let mut ins: Vec<Box<dyn Instruction>> = Vec::new();
+        let mut ins: Vec<Box<dyn Atom>> = Vec::new();
         
 
         let second_reg = match self.op.get_second_reg(cpu::Register::R2) {

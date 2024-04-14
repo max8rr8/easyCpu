@@ -1,4 +1,4 @@
-use crate::{compile::{CompileContext, Instruction}, cpu};
+use crate::{compile::{CompileContext, Atom}, cpu};
 
 use crate::compile::CompileError;
 
@@ -14,7 +14,7 @@ impl CustomInstruction {
     }
 }
 
-impl Instruction for CustomInstruction {
+impl Atom for CustomInstruction {
     fn compile(&self, ctx: &mut CompileContext) -> Result<(), CompileError> {
         ctx.instruct(cpu::Instruction::CUSTOM(self.val));
         Ok(())
@@ -32,7 +32,7 @@ impl CustomMultiInstruction {
     }
 }
 
-impl Instruction for CustomMultiInstruction {
+impl Atom for CustomMultiInstruction {
     fn compile(&self, ctx: &mut CompileContext) -> Result<(), CompileError> {
         for v in self.val.iter() {
           ctx.instruct(cpu::Instruction::CUSTOM(*v));
@@ -81,7 +81,7 @@ impl NopInstruction {
     }
 }
 
-impl Instruction for NopInstruction {
+impl Atom for NopInstruction {
     fn compile(&self, ctx: &mut CompileContext) -> Result<(), CompileError> {
         ctx.instruct(cpu::Instruction::NOP);
         Ok(())

@@ -1,10 +1,10 @@
 use crate::compile::CompileError;
-use crate::compile::inst::compile_instructions;
+use crate::compile::atom::compile_instructions;
 use crate::parser::{ParsedLabel, ParseParts};
 use crate::cpu::{self};
 
 use super::alu::{AluInstruction, AluOperation};
-use crate::compile::{CompileContext, Instruction};
+use crate::compile::{CompileContext, Atom};
 use super::load_const::{LoadConstInstruction, LoadConstOperation};
 
 #[derive(Clone, Debug)]
@@ -29,9 +29,9 @@ impl LoadLabelInstruction {
     }
 }
 
-impl Instruction for LoadLabelInstruction {
+impl Atom for LoadLabelInstruction {
     fn compile(&self, ctx: &mut CompileContext) -> Result<(), CompileError> {
-        let mut ins: Vec<Box<dyn Instruction>> = Vec::new();
+        let mut ins: Vec<Box<dyn Atom>> = Vec::new();
         if self.dst != cpu::Register::PC {
             ins.push(Box::new(AluInstruction::new(
                 AluOperation::MOV,

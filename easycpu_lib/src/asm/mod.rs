@@ -13,5 +13,5 @@ pub mod disasm;
 pub mod parse;
 
 pub fn parse_and_compile(source: &str) -> Result<Vec<u16>, Vec<PosCompileError>> {
-    compile_program(dbg!(parse::parse_listing(source).map_err(|x| vec![x])?))
+    compile_program(parse::parse_listing(source).map_err(|x| vec![x])?)
 }

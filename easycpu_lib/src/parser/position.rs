@@ -1,6 +1,6 @@
 use std::fmt::Display;
 
-use crate::compile::{AtomBox, CompileError, Instruction};
+use crate::compile::{AtomBox, CompileError, Atom};
 
 #[derive(Clone, Copy, Debug, Default)]
 pub struct ParsePosition {
@@ -76,7 +76,7 @@ impl PositionAtom {
     }
 }
 
-impl Instruction for PositionAtom {
+impl Atom for PositionAtom {
     fn compile(&self, ctx: &mut crate::compile::CompileContext) -> Result<(), CompileError> {
         // Act as an error boundary
         if let Err(error) = self.atom.compile(ctx) {

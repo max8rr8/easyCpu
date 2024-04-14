@@ -2,14 +2,14 @@ use super::CompileContext;
 use crate::compile::CompileError;
 use std::fmt;
 
-pub trait Instruction: fmt::Debug {
+pub trait Atom: fmt::Debug {
     fn compile(&self, ctx: &mut CompileContext) -> Result<(), CompileError>;
 }
 
-pub type AtomBox = Box<dyn Instruction>;
+pub type AtomBox = Box<dyn Atom>;
 
 pub fn compile_instructions(
-    instructions: Vec<Box<dyn Instruction>>,
+    instructions: Vec<Box<dyn Atom>>,
     ctx: &mut CompileContext,
 ) -> Result<(), CompileError> {
     instructions
@@ -31,7 +31,7 @@ impl From<CompileError> for ErrorAtom {
     }
 }
 
-impl Instruction for ErrorAtom {
+impl Atom for ErrorAtom {
     fn compile(&self, _: &mut CompileContext) -> Result<(), CompileError> {
         Err(self.err.clone())
     }

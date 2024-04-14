@@ -1,12 +1,12 @@
 use crate::asm::custom::CustomInstruction;
 use crate::compile::CompileError;
-use crate::compile::inst::compile_instructions;
+use crate::compile::atom::compile_instructions;
 use crate::parser::{ParseParts, convert_to_u16};
 use crate::cpu::{self};
 
 use super::alu::{AluInstruction, AluOperation};
 use super::branch::BranchInstruction;
-use crate::compile::{CompileContext, Instruction};
+use crate::compile::{CompileContext, Atom};
 use super::mem::{MemInstruction, MemOperation};
 
 #[derive(Copy, Clone, Debug)]
@@ -63,7 +63,7 @@ impl LoadConstInstruction {
         val: u16,
         dst: cpu::Register,
         src: cpu::Register,
-    ) -> Option<Vec<Box<dyn Instruction>>> {
+    ) -> Option<Vec<Box<dyn Atom>>> {
         match val {
             0 => Some(vec![Box::new(AluInstruction::new(
                 AluOperation::ADD,
@@ -116,7 +116,7 @@ impl LoadConstInstruction {
     }
 }
 
-impl Instruction for LoadConstInstruction {
+impl Atom for LoadConstInstruction {
     fn compile(&self, ctx: &mut CompileContext) -> Result<(), CompileError> {
         let val_neg = u16::MAX.wrapping_sub(self.val).wrapping_add(1);
 
@@ -126,7 +126,7 @@ impl Instruction for LoadConstInstruction {
         };
 
         
-        let ins: Vec<Box<dyn Instruction>> =
+        let ins: Vec<Box<dyn Atom>> =
             if let Some(v) = LoadConstInstruction::short_variant(self.val, self.dst, src_reg) {
                 v
             } else if self.val < 4096 {

@@ -2,7 +2,7 @@ use crate::compile::CompileError;
 use crate::parser::ParseParts;
 use crate::cpu;
 
-use crate::compile::{CompileContext, Instruction};
+use crate::compile::{CompileContext, Atom};
 
 #[derive(Copy, Clone, Debug)]
 pub enum MemOperation {
@@ -121,7 +121,7 @@ impl MemInstruction {
     }
 }
 
-impl Instruction for MemInstruction {
+impl Atom for MemInstruction {
     fn compile(&self, ctx: &mut CompileContext) -> Result<(), CompileError> {
         let (op_hi, op_lo, op_sw) = self.op.get_flags();
         let ins = cpu::MemInstruction {

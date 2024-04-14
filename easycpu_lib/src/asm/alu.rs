@@ -2,7 +2,7 @@ use crate::compile::CompileError;
 use crate::parser::ParseParts;
 use crate::cpu;
 
-use crate::compile::{CompileContext, Instruction};
+use crate::compile::{CompileContext, Atom};
 
 #[derive(Copy, Clone, Debug)]
 pub enum AluOperation {
@@ -176,7 +176,7 @@ impl AluInstruction {
     }
 }
 
-impl Instruction for AluInstruction {
+impl Atom for AluInstruction {
     fn compile(&self, ctx: &mut CompileContext) -> Result<(), CompileError> {
         let (op_x, op_y, op_o) = self.op.get_flags();
 
