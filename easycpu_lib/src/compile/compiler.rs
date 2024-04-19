@@ -1,31 +1,16 @@
 use crate::parser::{CompileErrorWithPos, ParsePosition, PosCompileError};
-use std::collections::HashMap;
-
 use super::{AtomBox, CompileContext, CompileError};
 
 pub fn compile_program(program: Vec<AtomBox>) -> Result<Vec<u16>, Vec<PosCompileError>> {
     let mut attempts_left = 1024;
 
-    let mut ctx = CompileContext {
-        current_pc: 0,
-        label_map: HashMap::new(),
-        scope_stack: Vec::new(),
-        instructions: Vec::new(),
-        cur_scope: 0,
-        should_recompile: false,
-        resolving_labels: true,
-        errors: Vec::new(),
-    };
+    let mut ctx = CompileContext::new();
 
     while attempts_left > 0 {
         ctx.should_recompile = false;
 
-        ctx.instructions.clear();
-        ctx.scope_stack.clear();
         ctx.current_pc = 0;
-
-        ctx.cur_scope = 0;
-        ctx.scope_stack.push(0);
+        ctx.instructions.clear();
 
         for atom in program.iter() {
             if let Err(e) = atom.compile(&mut ctx) {
@@ -36,11 +21,8 @@ pub fn compile_program(program: Vec<AtomBox>) -> Result<Vec<u16>, Vec<PosCompile
         if !ctx.errors.is_empty() {
             return Err(ctx.errors);
         }
-
-        if ctx.resolving_labels {
-            ctx.resolving_labels = false;
-            continue;
-        }
+        
+        ctx.named_resolver.finish();
 
         if !ctx.should_recompile {
             break;

@@ -1,5 +1,5 @@
-use crate::cpu;
 use crate::compile::{CompileContext, CompileError};
+use crate::cpu;
 use std::collections::VecDeque;
 
 #[derive(Clone, Debug)]
@@ -9,24 +9,9 @@ pub struct ParsedLabel {
 
 impl ParsedLabel {
     pub fn resolve(&self, ctx: &mut CompileContext) -> Result<u16, CompileError> {
-        if ctx.resolving_labels {
-            return Ok(ctx.current_pc.wrapping_add(1024));
-        }
-
-        let mut label_pos: Option<Option<u16>> = None;
-        for scope in ctx.scope_stack.iter().rev() {
-            let pos = ctx.label_map.get(&(*scope, self.label.to_owned()));
-            if let Some(pos) = pos {
-                label_pos = Some(*pos);
-                break;
-            }
-        }
-        let label_pos = label_pos.ok_or_else(|| {
-            // dbg!(&ctx.scope_stack);
-            CompileError::UnknownLabel(self.label.clone())
-        })?;
-        let label_pos = label_pos.unwrap_or(ctx.current_pc.wrapping_sub(8));
-        Ok(label_pos.wrapping_sub(ctx.current_pc))
+        ctx.named_resolver
+            .resolve_label_id(&self.label)
+            .and_then(|id| ctx.resolve_label(id))
     }
 }
 

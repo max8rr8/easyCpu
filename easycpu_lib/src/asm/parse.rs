@@ -85,7 +85,6 @@ fn parse_instruction(s: String) -> Result<AtomBox, CompileError> {
 struct AsmParse<'a> {
     reader: ParseReader<'a>,
     atoms: Vec<AtomBox>,
-    current_scope: usize,
 }
 
 enum AsmStartToken {
@@ -131,12 +130,9 @@ impl<'a> AsmParse<'a> {
         let mut subparser = AsmParse {
             reader: ParseReader::from(&mut combined),
             atoms: Vec::new(),
-            current_scope: self.current_scope,
         };
 
         subparser.parse()?;
-        self.current_scope = subparser.current_scope;
-
         Ok(subparser.atoms)
     }
 
@@ -155,10 +151,12 @@ impl<'a> AsmParse<'a> {
                     parse_instruction(collected)
                 })
             }
+
             AsmStartToken::Comment => {
                 self.reader.read_until(|cur, _| cur == '\n')?;
                 None
             }
+
             AsmStartToken::Number => {
                 let collected: Vec<char> = self
                     .reader
@@ -170,20 +168,18 @@ impl<'a> AsmParse<'a> {
                         .map(|val| Box::new(CustomInstruction::new(val)) as AtomBox),
                 )
             }
+
             AsmStartToken::String => {
                 let chars = self.reader.take_block()?;
                 let ins = Box::new(CustomMultiInstruction::from(chars));
 
                 Some(Ok(ins as AtomBox))
             }
-            AsmStartToken::CurlyBracket => {
-                let atoms = self.take_parse_block()?;
 
-                self.current_scope += 1;
-                Some(Ok(
-                    Box::new(LabelScope::new(self.current_scope, atoms)) as AtomBox
-                ))
-            }
+            AsmStartToken::CurlyBracket => Some(Ok(Box::new(LabelScope::new(
+                self.take_parse_block()?,
+            )) as AtomBox)),
+
             AsmStartToken::Parentheses => {
                 let last_el = self.atoms.pop();
                 let mut block = self.take_parse_block()?;
@@ -195,6 +191,7 @@ impl<'a> AsmParse<'a> {
 
                 None
             }
+
             AsmStartToken::Skip => {
                 self.reader.take()?;
                 None
@@ -237,7 +234,6 @@ impl<'a> From<&'a mut Chars<'a>> for AsmParse<'a> {
         let a: AsmParse = AsmParse {
             reader: ParseReader::from(c),
             atoms: Vec::new(),
-            current_scope: 0,
         };
         a
     }

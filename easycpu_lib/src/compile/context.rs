@@ -1,21 +1,30 @@
-use std::collections::{hash_map::Entry, HashMap};
-
 use crate::{cpu, parser::PosCompileError};
 
-use super::CompileError;
+use super::{label::LabelResolver, CompileError};
 
 pub struct CompileContext {
     pub current_pc: u16,
-    pub label_map: HashMap<(usize, String), Option<u16>>,
-    pub scope_stack: Vec<usize>,
     pub instructions: Vec<cpu::Instruction>,
-    pub cur_scope: usize,
+
+    pub named_resolver: Box<LabelResolver>,
+    label_pos: Vec<u16>,
+
     pub should_recompile: bool,
-    pub resolving_labels: bool,
-    pub errors: Vec<PosCompileError>
+    pub errors: Vec<PosCompileError>,
 }
 
 impl CompileContext {
+    pub fn new() -> Self {
+        CompileContext {
+            current_pc: 0,
+            named_resolver: Box::new(LabelResolver::new()),
+            label_pos: Vec::new(),
+            instructions: Vec::new(),
+            should_recompile: false,
+            errors: Vec::new(),
+        }
+    }
+
     pub fn instruct(&mut self, instruction: cpu::Instruction) {
         self.instructions.push(instruction);
         self.current_pc += 1;
@@ -25,39 +34,29 @@ impl CompileContext {
         self.instructions[pc as usize] = instruction;
     }
 
-    pub fn emit_label(&mut self, label: &String) -> Result<(), CompileError> {
-        if self.resolving_labels {
-            let key = (self.cur_scope, label.to_owned());
-            if let Entry::Vacant(e) = self.label_map.entry(key) {
-                e.insert(None);
-            } else {
-                return Err(CompileError::LabelRedefined(label.clone()));
-            }
-            return Ok(());
-        }
+    pub fn emit_new_label(&mut self) -> usize {
+        let id = self.label_pos.len();
+        self.label_pos.push(self.current_pc.wrapping_add(8));
+        self.should_recompile = true;
+        id
+    }
 
-        let key = (self.cur_scope, label.to_owned());
-        let label_value = self.label_map.get(&key).unwrap_or(&None);
-        let should_update = match label_value {
-            None => true,
-            Some(v) => v != &self.current_pc,
-        };
-
-        if should_update {
-            self.label_map.insert(key, Some(self.current_pc));
+    pub fn emit_label(&mut self, id: usize) -> Result<(), CompileError> {
+        let prev_value = self.label_pos[id];
+        if prev_value != self.current_pc {
+            self.label_pos[id] = self.current_pc;
             self.should_recompile = true;
         }
 
         Ok(())
     }
 
-    pub fn enter_local_scope(&mut self, id: usize) {
-        self.scope_stack.push(id);
-        self.cur_scope = id;
-    }
+    pub fn resolve_label(&mut self, label_id: usize) -> Result<u16, CompileError> {
+        if label_id == usize::MAX {
+            return Ok(self.current_pc.wrapping_add(8));
+        }
 
-    pub fn leave_local_scope(&mut self) {
-        self.scope_stack.pop();
-        self.cur_scope = *self.scope_stack.last().unwrap_or(&0);
+        let label_pos = self.label_pos[label_id];
+        Ok(label_pos.wrapping_sub(self.current_pc))
     }
 }
