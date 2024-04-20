@@ -87,7 +87,7 @@ impl JumpInstruction {
 impl Atom for JumpInstruction {
     fn compile(&self, ctx: &mut CompileContext) -> Result<(), CompileError> {
         let (eq, gt, lt) = self.op.get_flags();
-        let targ = self.targ.resolve(ctx)?;
+        let mut targ = self.targ.resolve(ctx)?;
 
         let converted = JumpInstruction::convert_u16_to_shift(targ).ok();
 
@@ -97,16 +97,19 @@ impl Atom for JumpInstruction {
             return branch_ins.compile(ctx);
         }
 
-        ctx.instruct(cpu::Instruction::BRANCH(cpu::BranchInstruction {
-            eq: !eq,
-            gt: !gt,
-            lt: !lt,
-            cond: self.cond,
-            shift: 3,
-        }));
+        if !(eq && gt && lt) {
+            ctx.instruct(cpu::Instruction::BRANCH(cpu::BranchInstruction {
+                eq: !eq,
+                gt: !gt,
+                lt: !lt,
+                cond: self.cond,
+                shift: 3,
+            }));
+            targ = targ.wrapping_sub(1);
+        }
 
         ctx.instruct(MemOperation::LADD.instr(cpu::Register::PC, cpu::Register::PC, 1)?);
-        ctx.instruct(cpu::Instruction::CUSTOM(targ.wrapping_sub(1)));
+        ctx.instruct(cpu::Instruction::CUSTOM(targ));
 
         Ok(())
     }

@@ -1,11 +1,10 @@
 use crate::compile::CompileError;
-use crate::compile::atom::compile_instructions;
-use crate::parser::{ParsedLabel, ParseParts};
 use crate::cpu::{self};
+use crate::parser::{ParseParts, ParsedLabel};
 
-use super::alu::{AluInstruction, AluOperation};
-use crate::compile::{CompileContext, Atom};
-use super::load_const::{LoadConstInstruction, LoadConstOperation};
+use super::alu::AluOperation;
+use super::load_const::LoadConstInstruction;
+use crate::compile::{Atom, CompileContext};
 
 #[derive(Clone, Debug)]
 pub struct LoadLabelInstruction {
@@ -31,21 +30,17 @@ impl LoadLabelInstruction {
 
 impl Atom for LoadLabelInstruction {
     fn compile(&self, ctx: &mut CompileContext) -> Result<(), CompileError> {
-        let mut ins: Vec<Box<dyn Atom>> = Vec::new();
-        if self.dst != cpu::Register::PC {
-            ins.push(Box::new(AluInstruction::new(
-                AluOperation::MOV,
-                self.dst,
-                cpu::Register::PC,
-                cpu::Register::ZX,
-            )));
-        }
-        ins.push(Box::new(LoadConstInstruction::new(
-            LoadConstOperation::ADD,
-            self.dst,
-            self.label.resolve(ctx)?,
-        )?));
+        let targ_pos = self.label.resolve(ctx)?;
 
-        compile_instructions(ins, ctx)
+        if self.dst != cpu::Register::PC {
+            ctx.instruct(AluOperation::MOV.instr(self.dst, cpu::Register::PC, cpu::Register::ZX));
+        }
+
+        let v = LoadConstInstruction::instr_add(self.dst, targ_pos);
+        for inst in v {
+            ctx.instruct(inst);
+        }
+
+        Ok(())
     }
 }

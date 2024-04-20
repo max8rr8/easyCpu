@@ -1,13 +1,10 @@
-use crate::asm::custom::CustomInstruction;
 use crate::compile::CompileError;
-use crate::compile::atom::compile_instructions;
-use crate::parser::{ParseParts, convert_to_u16};
 use crate::cpu::{self};
+use crate::parser::{convert_to_u16, ParseParts};
 
-use super::alu::{AluInstruction, AluOperation};
-use super::branch::BranchInstruction;
-use crate::compile::{CompileContext, Atom};
-use super::mem::{MemInstruction, MemOperation};
+use super::alu::AluOperation;
+use super::mem::MemOperation;
+use crate::compile::{Atom, CompileContext};
 
 #[derive(Copy, Clone, Debug)]
 pub enum LoadConstOperation {
@@ -63,122 +60,114 @@ impl LoadConstInstruction {
         val: u16,
         dst: cpu::Register,
         src: cpu::Register,
-    ) -> Option<Vec<Box<dyn Atom>>> {
+    ) -> Option<Vec<cpu::Instruction>> {
         match val {
-            0 => Some(vec![Box::new(AluInstruction::new(
-                AluOperation::ADD,
-                dst,
-                src,
-                cpu::Register::ZX,
-            ))]),
-
-            1 => Some(vec![Box::new(AluInstruction::new(
-                AluOperation::INC,
-                dst,
-                src,
-                cpu::Register::ZX,
-            ))]),
+            0 => Some(vec![AluOperation::ADD.instr(dst, src, cpu::Register::ZX)]),
+            1 => Some(vec![AluOperation::INC.instr(dst, src, cpu::Register::ZX)]),
+            0xffff => Some(vec![AluOperation::DEC.instr(dst, src, cpu::Register::ZX)]),
 
             2 => Some(vec![
-                Box::new(AluInstruction::new(
-                    AluOperation::INC,
-                    dst,
-                    src,
-                    cpu::Register::ZX,
-                )),
-                Box::new(AluInstruction::new(
-                    AluOperation::INC,
-                    dst,
-                    dst,
-                    cpu::Register::ZX,
-                )),
+                AluOperation::INC.instr(dst, src, cpu::Register::ZX),
+                AluOperation::INC.instr(dst, dst, cpu::Register::ZX),
+            ]),
+            0xfffe => Some(vec![
+                AluOperation::DEC.instr(dst, src, cpu::Register::ZX),
+                AluOperation::DEC.instr(dst, dst, cpu::Register::ZX),
             ]),
 
-            0xffff => Some(vec![Box::new(AluInstruction::new(
-                AluOperation::DEC,
-                dst,
-                src,
-                cpu::Register::ZX,
-            ))]),
-
-            // 0xfffe => Some(vec![Box::new(
-            //     *AluInstruction::new(
-            //         AluOperation::ADD,
-            //         dst,
-            //         cpu::Register::ZX,
-            //         cpu::Register::ZX,
-            //     )
-            //     .set_flags(true, true, false),
-            // )]),
-
             _ => None,
+        }
+    }
+
+    pub fn instr_add(dst: cpu::Register, val: u16) -> Vec<cpu::Instruction> {
+        let val_neg = u16::MAX.wrapping_sub(val).wrapping_add(1);
+
+        if let Some(v) = Self::short_variant(val, dst, dst) {
+            v
+        } else if val < 4096 || dst == cpu::Register::PC {
+            // We can fit up to 12 bits of data into two operations
+            // Ooor if we are operating on PC basically everything
+            vec![
+                MemOperation::LADD
+                    .instr(dst, cpu::Register::PC, 1)
+                    .expect("CONST BAD LADD"),
+                cpu::Instruction::CUSTOM(val),
+            ]
+        } else if val_neg < 4096 {
+            vec![
+                MemOperation::LSUB
+                    .instr(dst, cpu::Register::PC, 1)
+                    .expect("CONST BAD LSUB"),
+                cpu::Instruction::CUSTOM(val_neg),
+            ]
+        } else {
+            vec![
+                MemOperation::LADD
+                    .instr(dst, cpu::Register::PC, 2)
+                    .expect("CONST BAD LADD"),
+                cpu::Instruction::BRANCH(cpu::BranchInstruction {
+                    eq: true,
+                    gt: true,
+                    lt: true,
+                    cond: cpu::Register::ZX,
+                    shift: 2,
+                }), // Jump over value so it would not be executed
+                cpu::Instruction::CUSTOM(val),
+            ]
+        }
+    }
+
+    pub fn instr_load(dst: cpu::Register, val: u16) -> Vec<cpu::Instruction> {
+        let val_neg = u16::MAX.wrapping_sub(val).wrapping_add(1);
+
+        if let Some(v) = Self::short_variant(val, dst, cpu::Register::ZX) {
+            v
+        } else if val < 4096 || dst == cpu::Register::PC {
+            // We can fit up to 12 bits of data into two operations
+            // Ooor if we are operating on PC basically everything
+            vec![
+                MemOperation::LOAD
+                    .instr(dst, cpu::Register::PC, 1)
+                    .expect("CONST BAD LOAD"),
+                cpu::Instruction::CUSTOM(val),
+            ]
+        } else if val_neg < 4096 {
+            vec![
+                AluOperation::MOV.instr(dst, cpu::Register::ZX, cpu::Register::ZX),
+                MemOperation::LSUB
+                    .instr(dst, cpu::Register::PC, 1)
+                    .expect("CONST BAD LSUB"),
+                cpu::Instruction::CUSTOM(val_neg),
+            ]
+        } else {
+            vec![
+                MemOperation::LOAD
+                    .instr(dst, cpu::Register::PC, 2)
+                    .expect("CONST BAD LADD"),
+                cpu::Instruction::BRANCH(cpu::BranchInstruction {
+                    eq: true,
+                    gt: true,
+                    lt: true,
+                    cond: cpu::Register::ZX,
+                    shift: 2,
+                }), // Jump over value so it would not be executed
+                cpu::Instruction::CUSTOM(val),
+            ]
         }
     }
 }
 
 impl Atom for LoadConstInstruction {
     fn compile(&self, ctx: &mut CompileContext) -> Result<(), CompileError> {
-        let val_neg = u16::MAX.wrapping_sub(self.val).wrapping_add(1);
-
-        let (mem_op, src_reg) = match self.op {
-            LoadConstOperation::LOAD => (MemOperation::LOAD, cpu::Register::ZX),
-            LoadConstOperation::ADD => (MemOperation::LADD, self.dst),
+        let v = match self.op {
+            LoadConstOperation::LOAD => Self::instr_load(self.dst, self.val),
+            LoadConstOperation::ADD => Self::instr_add(self.dst, self.val),
         };
 
-        
-        let ins: Vec<Box<dyn Atom>> =
-            if let Some(v) = LoadConstInstruction::short_variant(self.val, self.dst, src_reg) {
-                v
-            } else if self.val < 4096 {
-                // We can fit up to 12 bits of data into two operations
-                vec![
-                    Box::new(MemInstruction::new(mem_op, self.dst, cpu::Register::PC, 1)?),
-                    Box::new(CustomInstruction::new(self.val)),
-                ]
-            } else if val_neg < 4096
-                && matches!(self.op, LoadConstOperation::LOAD)
-                && self.dst != cpu::Register::PC
-            {
-                vec![
-                    Box::new(AluInstruction::new(
-                        AluOperation::MOV,
-                        self.dst,
-                        cpu::Register::ZX,
-                        cpu::Register::ZX,
-                    )),
-                    Box::new(MemInstruction::new(
-                        MemOperation::LSUB,
-                        self.dst,
-                        cpu::Register::PC,
-                        1,
-                    )?),
-                    Box::new(CustomInstruction::new(val_neg)),
-                ]
-            } else if val_neg < 4096 && matches!(self.op, LoadConstOperation::ADD) {
-                
-                vec![
-                    Box::new(MemInstruction::new(
-                        MemOperation::LSUB,
-                        self.dst,
-                        cpu::Register::PC,
-                        1,
-                    )?),
-                    Box::new(CustomInstruction::new(val_neg)),
-                ]
-            } else {
+        for inst in v {
+            ctx.instruct(inst);
+        }
 
-                vec![
-                    Box::new(MemInstruction::new(
-                        mem_op,
-                        self.dst,
-                        cpu::Register::PC,
-                        2,
-                    )?),
-                    Box::new(BranchInstruction::new(cpu::Register::ZX, 2)?), // Jump over value so it would not be executed
-                    Box::new(CustomInstruction::new(self.val)),
-                ]
-            };
-
-        compile_instructions(ins, ctx)
+        Ok(())
     }
 }
