@@ -5,6 +5,8 @@ pub mod compiler;
 pub mod context;
 pub mod label;
 pub mod namedlabel;
+pub mod status;
+pub mod comp;
 
 pub use atom::{Atom, AtomBox, ErrorAtom, compile_instructions};
 pub use context::CompileContext;

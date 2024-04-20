@@ -78,15 +78,14 @@ impl PositionAtom {
 
 impl Atom for PositionAtom {
     fn compile(&self, ctx: &mut crate::compile::CompileContext) -> Result<(), CompileError> {
+        let old_pos = ctx.status.swap_pos((self.start_pos, self.end_pos));
+        
         // Act as an error boundary
         if let Err(error) = self.atom.compile(ctx) {
-          ctx.errors.push(PosCompileError {
-            error,
-            start_pos: self.start_pos,
-            end_pos: self.end_pos
-          })
+          ctx.status.report_err(error)
         }
 
+        ctx.status.swap_pos(old_pos);
         Ok(())
     }
 }

@@ -5,3 +5,6 @@ pub mod exec;
 pub mod asm;
 pub mod parser;
 pub mod compile;
+
+pub(crate) mod asany;
+pub(crate) use asany::AsAny;

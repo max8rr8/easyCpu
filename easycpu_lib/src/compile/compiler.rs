@@ -1,5 +1,8 @@
+use super::{
+    comp::MainCompContext,
+    AtomBox, CompileContext, CompileError,
+};
 use crate::parser::{CompileErrorWithPos, ParsePosition, PosCompileError};
-use super::{AtomBox, CompileContext, CompileError};
 
 pub fn compile_program(program: Vec<AtomBox>) -> Result<Vec<u16>, Vec<PosCompileError>> {
     let mut attempts_left = 1024;
@@ -7,26 +10,25 @@ pub fn compile_program(program: Vec<AtomBox>) -> Result<Vec<u16>, Vec<PosCompile
     let mut ctx = CompileContext::new();
 
     while attempts_left > 0 {
-        ctx.should_recompile = false;
+        if !ctx.status.reset() {
+            break;
+        }
 
-        ctx.current_pc = 0;
-        ctx.instructions.clear();
+        ctx.comp.reset();
 
         for atom in program.iter() {
             if let Err(e) = atom.compile(&mut ctx) {
-                ctx.errors.push(e.with_pos(ParsePosition::default()));
+                ctx.status.report_err(e);
             }
         }
 
-        if !ctx.errors.is_empty() {
-            return Err(ctx.errors);
+        let errors = ctx.status.take_errors();
+        if !errors.is_empty() {
+            return Err(errors);
         }
-        
+
         ctx.named_resolver.finish();
 
-        if !ctx.should_recompile {
-            break;
-        }
         attempts_left -= 1;
     }
     if attempts_left == 0 {
@@ -35,8 +37,10 @@ pub fn compile_program(program: Vec<AtomBox>) -> Result<Vec<u16>, Vec<PosCompile
         ]);
     }
 
-    ctx.instructions
-        .into_iter()
+    ctx.comp.as_any()
+        .downcast_ref::<MainCompContext>()
+        .expect("Not a mian inst context")
+        .iter_instructions()
         .map(|x| x.encode())
         .collect::<Result<Vec<u16>, _>>()
         .map_err(|x| vec![CompileError::InvalidInstruction(x).with_pos(ParsePosition::default())])
