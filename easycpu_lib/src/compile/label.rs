@@ -56,6 +56,10 @@ impl LabelResolver {
             Err(CompileError::UnknownLabel(label.to_owned()))
         }
     }
+
+    pub fn ready(&mut self) -> bool {
+        !self.resolving_labels
+    }
 }
 
 

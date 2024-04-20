@@ -1,5 +1,4 @@
 use self::{
-    alu::StackAluInstruction,
     base::{StackBaseInstruction, StackBaseOperation},
     call::StackCallInstruction,
     cons::{StackConstInstruction, StackConstOperation},
@@ -9,7 +8,7 @@ use self::{
     mem::StackMemInstruction,
 };
 
-use crate::compile::{AtomBox, CompileError};
+use crate::{compile::{AtomBox, CompileError}, stack::{instr::alu::AluStackOp, stackop::StackOpInstruction}};
 
 use super::{
     alu::AluOperation, jump::JumpOperation, mem::MemOperation
@@ -17,7 +16,6 @@ use super::{
 
 use crate::parser::ParseParts;
 
-pub mod alu;
 pub mod base;
 pub mod call;
 pub mod cons;
@@ -47,8 +45,8 @@ pub fn parse_instruction(
     };
 
     if let Some(alu_op) = AluOperation::parse_operation(command_pure) {
-        let ins = StackAluInstruction::parse_asm(alu_op, command_flags);
-        return Ok(Box::new(ins));
+        let op = AluStackOp::parse_asm(alu_op, command_flags);
+        return Ok(Box::new(StackOpInstruction::wrap(op)));
     };
 
     if let Some(mem_op) = MemOperation::parse_operation(command_pure) {

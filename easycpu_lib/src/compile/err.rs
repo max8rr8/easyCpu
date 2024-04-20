@@ -21,5 +21,8 @@ pub enum CompileError {
     UnknownToken(char),
     InvalidNumber(String),
 
-    UnmatchedClosingBracket
+    UnmatchedClosingBracket,
+    UnknownModifier(String),
+    
+    InstructionInStackopt,
 }

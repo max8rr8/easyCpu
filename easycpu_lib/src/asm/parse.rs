@@ -17,6 +17,7 @@ use crate::cpu;
 use crate::parser::parse::{end_checker, letter_checker, nummeric_checker};
 use crate::parser::position::{PosCompileError, PositionAtom};
 use crate::parser::{parse_parts, ParseParts, ParseReader};
+use crate::stack::StackOptAtom;
 
 fn parse_instruction(s: String) -> Result<AtomBox, CompileError> {
     let s = s.to_uppercase();
@@ -82,9 +83,24 @@ fn parse_instruction(s: String) -> Result<AtomBox, CompileError> {
     Err(CompileError::UnknownCommand(String::from(command_pure)))
 }
 
+enum Modifier {
+    Scope,
+    StackOpt,
+}
+
+impl Modifier {
+    pub fn from_name(name: &str) -> Option<Self> {
+        match name {
+            "stackopt" => Some(Modifier::StackOpt),
+            _ => None,
+        }
+    }
+}
+
 struct AsmParse<'a> {
     reader: ParseReader<'a>,
     atoms: Vec<AtomBox>,
+    modifier: Modifier,
 }
 
 enum AsmStartToken {
@@ -95,6 +111,7 @@ enum AsmStartToken {
     CurlyBracket,
     Parentheses,
     Skip,
+    Modifier,
     Unknown,
 }
 
@@ -105,6 +122,8 @@ impl<'a> AsmParse<'a> {
             Ok(AsmStartToken::Letter)
         } else if cur == '#' {
             Ok(AsmStartToken::Comment)
+        } else if cur == '@' {
+            Ok(AsmStartToken::Modifier)
         } else if nummeric_checker(cur) {
             Ok(AsmStartToken::Number)
         } else if cur == '"' {
@@ -130,6 +149,7 @@ impl<'a> AsmParse<'a> {
         let mut subparser = AsmParse {
             reader: ParseReader::from(&mut combined),
             atoms: Vec::new(),
+            modifier: Modifier::Scope,
         };
 
         subparser.parse()?;
@@ -157,6 +177,22 @@ impl<'a> AsmParse<'a> {
                 None
             }
 
+            AsmStartToken::Modifier => {
+                self.reader.take()?;
+                let modi = self
+                    .reader
+                    .read_until(|cur, _| cur.is_whitespace() || end_checker(cur) || cur == '{')?;
+                let modi: String = modi.into_iter().collect();
+                let modi = modi.to_lowercase();
+
+                if let Some(modifier) = Modifier::from_name(&modi) {
+                    self.modifier = modifier;
+                    None
+                } else {
+                    Some(Err(CompileError::UnknownModifier(modi)))
+                }
+            }
+
             AsmStartToken::Number => {
                 let collected: Vec<char> = self
                     .reader
@@ -176,9 +212,15 @@ impl<'a> AsmParse<'a> {
                 Some(Ok(ins as AtomBox))
             }
 
-            AsmStartToken::CurlyBracket => Some(Ok(Box::new(LabelScope::new(
-                self.take_parse_block()?,
-            )) as AtomBox)),
+            AsmStartToken::CurlyBracket => {
+                let block = self.take_parse_block()?;
+                let atom: AtomBox = match self.modifier {
+                    Modifier::Scope => Box::new(LabelScope::new(block)),
+                    Modifier::StackOpt => Box::new(StackOptAtom::new(block)),
+                };
+                self.modifier = Modifier::Scope;
+                Some(Ok(atom))
+            }
 
             AsmStartToken::Parentheses => {
                 let last_el = self.atoms.pop();
@@ -234,6 +276,7 @@ impl<'a> From<&'a mut Chars<'a>> for AsmParse<'a> {
         let a: AsmParse = AsmParse {
             reader: ParseReader::from(c),
             atoms: Vec::new(),
+            modifier: Modifier::Scope,
         };
         a
     }

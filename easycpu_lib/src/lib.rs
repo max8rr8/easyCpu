@@ -7,4 +7,5 @@ pub mod parser;
 pub mod compile;
 
 pub(crate) mod asany;
+pub mod stack;
 pub(crate) use asany::AsAny;
