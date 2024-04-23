@@ -80,6 +80,7 @@ input {
   padding: 5px;
   font-size: 1.4em;
   gap: 10px;
+  margin: 0px;
 }
 
 .cpuExec .header span {
@@ -90,15 +91,15 @@ input {
   width: 60px;
 }
 
-.registers {
-  padding: 10px;
-}
-
-.registers h1 {
+.cpuExec h1 {
   font-weight: normal;
   font-size: 1.5em;
   margin-top: 0px;
   margin-bottom: 10px;
+}
+
+.cpuExec > * {
+  margin: 10px;
 }
 
 .registerTable {
@@ -111,7 +112,7 @@ input {
   border: solid 1px rgba(255, 255, 255, 0.2);
 }
 
-.registerTable input {
+.registerTable input, .memoryView input {
   width: 100px;
   border: none;
   border-radius: none;
@@ -121,5 +122,19 @@ input {
 }
 
 .registerTable td:nth-child(odd) {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.memoryView {
+  border-collapse: collapse;
+}
+
+.memoryView td {
+  padding: 4px;
+  border: solid 1px rgba(255, 255, 255, 0.2);
+}
+
+
+.memoryView td:first-child, .memoryView tr:first-child {
   background-color: rgba(255, 255, 255, 0.1);
 }

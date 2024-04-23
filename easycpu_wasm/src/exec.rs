@@ -54,4 +54,19 @@ impl DebugCpu {
     pub fn keep_running(&mut self) -> bool {
         self.cpu.get_mem(0xffff) != 0
     }
+
+    pub fn read_memory(&mut self, mut from: u16, to: u16) -> Vec<u16> {
+        let mut res = Vec::new();
+        
+        while from != to {
+            res.push(self.cpu.get_mem(from));
+            from = from.wrapping_add(1)
+        }
+
+        res
+    }
+
+    pub fn write_memory(&mut self, addr: u16, val: u16) {
+        self.cpu.set_mem(addr, val);
+    }
 }

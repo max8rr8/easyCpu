@@ -53,7 +53,10 @@ export class App extends EventTarget {
         this.addEventListener('compile', () => this.resetCpu())
         this.addEventListener('compile', () => this.disassemble())
 
-        this.setProgram(DEFAULT_PROGRAM)
+        this.setProgram(localStorage.getItem('program') || DEFAULT_PROGRAM)
+        this.addEventListener('programUpdate', () =>
+            localStorage.setItem('program', this.program)
+        )
     }
 
     setProgram(newProgram: string) {
