@@ -1,4 +1,4 @@
-use std::fmt::Debug;
+use std::{fmt::Debug, vec};
 
 use crate::{
     asm::{alu::AluOperation, mem::MemOperation},
@@ -8,14 +8,26 @@ use crate::{
 
 #[derive(Debug, Default)]
 pub struct StackOpSignature {
+    pub flags: u16,
+
     pub takes: usize,
     pub pushes: usize,
-    pub impure: bool,
+    pub temps: usize,
+}
+
+impl StackOpSignature {
+    pub const FLAG_SAVE_STACK: u16 = 1 << 0;
+    pub const FLAG_RESET_STACK: u16 = 1 << 1;
+
+    pub fn check(&self, other: u16) -> bool {
+        self.flags & other != 0
+    }
 }
 
 pub struct StackExecCtx {
     pub inps: Vec<cpu::Register>,
     pub outs: Vec<cpu::Register>,
+    pub temps: Vec<cpu::Register>,
 }
 
 pub trait StackOperation: Debug {
@@ -42,6 +54,10 @@ impl StackOpInstruction {
     pub fn wrap<T: StackOperation + 'static>(op: T) -> Self {
         StackOpInstruction { op: Box::new(op) }
     }
+
+    pub fn wrap_atombox<T: StackOperation + 'static>(op: T) -> Box<dyn Atom> {
+        Box::new(StackOpInstruction { op: Box::new(op) })
+    }
 }
 
 impl Atom for StackOpInstruction {
@@ -52,23 +68,23 @@ impl Atom for StackOpInstruction {
 }
 
 fn apply_stack_shift(comp: &mut dyn CompContext, stack_shift: &mut i8) {
-  while *stack_shift < 0 {
-    *stack_shift += 1;
-    comp.instruct(AluOperation::DEC.instr(
-      cpu::Register::SP,
-      cpu::Register::SP,
-      cpu::Register::ZX,
-    ));
-  }
+    while *stack_shift < 0 {
+        *stack_shift += 1;
+        comp.instruct(AluOperation::DEC.instr(
+            cpu::Register::SP,
+            cpu::Register::SP,
+            cpu::Register::ZX,
+        ));
+    }
 
-  while *stack_shift > 0 {
-    *stack_shift -= 1;
-    comp.instruct(AluOperation::INC.instr(
-      cpu::Register::SP,
-      cpu::Register::SP,
-      cpu::Register::ZX,
-    ));
-  }
+    while *stack_shift > 0 {
+        *stack_shift -= 1;
+        comp.instruct(AluOperation::INC.instr(
+            cpu::Register::SP,
+            cpu::Register::SP,
+            cpu::Register::ZX,
+        ));
+    }
 }
 
 pub fn compile_stackop(
@@ -89,23 +105,36 @@ pub fn compile_stackop(
             cpu::Register::R4,
             cpu::Register::R5,
         ],
+        temps: vec![],
     };
+
+    for _ in 0..signature.temps {
+        stack_exec.temps.push(stack_exec.outs.pop().unwrap());
+    }
 
     let mut stack_shift: i8 = 0;
 
     for i in (0..signature.takes).rev() {
         stack_shift -= 1;
-        comp.instruct(MemOperation::LOAD.instr(stack_exec.inps[i], cpu::Register::SP, stack_shift)?);
+        comp.instruct(MemOperation::LOAD.instr(
+            stack_exec.inps[i],
+            cpu::Register::SP,
+            stack_shift,
+        )?);
     }
 
-    if signature.impure {
-      apply_stack_shift(comp, &mut stack_shift);
+    if signature.check(StackOpSignature::FLAG_SAVE_STACK) {
+        apply_stack_shift(comp, &mut stack_shift);
     }
 
     op.execute(&mut stack_exec, comp)?;
 
     for i in 0..signature.pushes {
-        comp.instruct(MemOperation::STORE.instr(stack_exec.outs[i], cpu::Register::SP, stack_shift)?);
+        comp.instruct(MemOperation::STORE.instr(
+            stack_exec.outs[i],
+            cpu::Register::SP,
+            stack_shift,
+        )?);
         stack_shift += 1;
     }
 
