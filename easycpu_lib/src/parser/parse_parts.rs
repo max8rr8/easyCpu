@@ -8,7 +8,11 @@ pub struct ParsedLabel {
 }
 
 impl ParsedLabel {
-    pub fn resolve(&self, ctx: &mut CompileContext) -> Result<u16, CompileError> {
+    pub fn resolve(&self, ctx: &mut CompileContext) -> Result<usize, CompileError> {
+        ctx.named_resolver.resolve_label_id(&self.label)
+    }
+
+    pub fn resolve_pos(&self, ctx: &mut CompileContext) -> Result<u16, CompileError> {
         ctx.named_resolver
             .resolve_label_id(&self.label)
             .and_then(|id| ctx.resolve_label(id))

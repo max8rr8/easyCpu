@@ -1,7 +1,7 @@
+use crate::compile::comp::CompContext;
 use crate::cpu;
 use crate::parser::{ParseParts, ParsedLabel};
 
-use super::branch::BranchInstruction;
 use super::mem::MemOperation;
 use crate::compile::CompileError;
 use crate::compile::{CompileContext, Atom};
@@ -82,35 +82,51 @@ impl JumpInstruction {
             Err(CompileError::ShiftIsTooBig(0x7f))
         }
     }
-}
 
-impl Atom for JumpInstruction {
-    fn compile(&self, ctx: &mut CompileContext) -> Result<(), CompileError> {
-        let (eq, gt, lt) = self.op.get_flags();
-        let mut targ = self.targ.resolve(ctx)?;
+    pub fn instr(
+        comp: &mut dyn CompContext,
+        op: JumpOperation,
+        cond: cpu::Register,
+        label_id: usize,
+    ) -> Result<(), CompileError> {
+        let mut targ = comp.resolve_label(label_id)?;
+        let (eq, gt, lt) = op.get_flags();
 
         let converted = JumpInstruction::convert_u16_to_shift(targ).ok();
 
         if let Some(converted) = converted {
-            let mut branch_ins = BranchInstruction::new(self.cond, converted)?;
-            branch_ins.set_flags(eq, gt, lt);
-            return branch_ins.compile(ctx);
+            comp.instruct(cpu::Instruction::BRANCH(cpu::BranchInstruction {
+                eq,
+                gt,
+                lt,
+                cond,
+                shift: converted,
+            }));
+            return Ok(());
         }
 
         if !(eq && gt && lt) {
-            ctx.instruct(cpu::Instruction::BRANCH(cpu::BranchInstruction {
+            comp.instruct(cpu::Instruction::BRANCH(cpu::BranchInstruction {
                 eq: !eq,
                 gt: !gt,
                 lt: !lt,
-                cond: self.cond,
+                cond,
                 shift: 3,
             }));
             targ = targ.wrapping_sub(1);
         }
 
-        ctx.instruct(MemOperation::LADD.instr(cpu::Register::PC, cpu::Register::PC, 1)?);
-        ctx.instruct(cpu::Instruction::CUSTOM(targ));
+        comp.instruct(MemOperation::LADD.instr(cpu::Register::PC, cpu::Register::PC, 1)?);
+        comp.instruct(cpu::Instruction::CUSTOM(targ));
 
         Ok(())
+
+    }
+}
+
+impl Atom for JumpInstruction {
+    fn compile(&self, ctx: &mut CompileContext) -> Result<(), CompileError> {
+        let label_id = self.targ.resolve(ctx)?;
+        Self::instr(ctx.comp.as_mut(), self.op, self.cond, label_id)
     }
 }

@@ -1,19 +1,10 @@
-use self::{
-    base::{StackBaseInstruction, StackBaseOperation},
-    call::StackCallInstruction,
-    jump::StackJumpInstruction,
-    label::StackLabelInstruction,
-};
+use self::base::{StackBaseInstruction, StackBaseOperation};
 
 use crate::{
     compile::{AtomBox, CompileError},
     stack::{
         instr::{
-            alu::AluStackOp,
-            cons::ConstStackOp,
-            func::{FunctionOperation, FunctionStackOp},
-            local::{LocalOperation, LocalStackOp},
-            mem::MemStackOp,
+            alu::AluStackOp, call::StackCallInstruction, cons::ConstStackOp, func::{FunctionOperation, FunctionStackOp}, jump::StackJumpInstruction, label::StackLabelInstruction, local::{LocalOperation, LocalStackOp}, mem::MemStackOp
         },
         stackop::StackOpInstruction,
     },
@@ -24,9 +15,6 @@ use super::{alu::AluOperation, jump::JumpOperation, mem::MemOperation};
 use crate::parser::ParseParts;
 
 pub mod base;
-pub mod call;
-pub mod jump;
-pub mod label;
 
 pub fn parse_instruction(
     command_pure: &str,

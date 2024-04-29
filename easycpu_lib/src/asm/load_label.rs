@@ -1,3 +1,4 @@
+use crate::compile::comp::CompContext;
 use crate::compile::CompileError;
 use crate::cpu::{self};
 use crate::parser::{ParseParts, ParsedLabel};
@@ -26,20 +27,31 @@ impl LoadLabelInstruction {
 
         LoadLabelInstruction::new(dst, label)
     }
+
+    pub fn instr(
+        comp: &mut dyn CompContext,
+        dst: cpu::Register,
+        label_id: usize,
+    ) -> Result<(), CompileError> {
+        let targ_pos = comp.resolve_label(label_id)?;
+
+        if dst != cpu::Register::PC {
+            comp.instruct(AluOperation::MOV.instr(dst, cpu::Register::PC, cpu::Register::ZX));
+        }
+
+        let v = LoadConstInstruction::instr_add(dst, targ_pos);
+        for inst in v {
+            comp.instruct(inst);
+        }
+
+        Ok(())
+    }
 }
 
 impl Atom for LoadLabelInstruction {
     fn compile(&self, ctx: &mut CompileContext) -> Result<(), CompileError> {
-        let targ_pos = self.label.resolve(ctx)?;
-
-        if self.dst != cpu::Register::PC {
-            ctx.instruct(AluOperation::MOV.instr(self.dst, cpu::Register::PC, cpu::Register::ZX));
-        }
-
-        let v = LoadConstInstruction::instr_add(self.dst, targ_pos);
-        for inst in v {
-            ctx.instruct(inst);
-        }
+        let label_id = self.label.resolve(ctx)?;
+        Self::instr(ctx.comp.as_mut(), self.dst, label_id)?;
 
         Ok(())
     }
