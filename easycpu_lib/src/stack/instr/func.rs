@@ -72,7 +72,9 @@ impl FunctionStackOp {
 impl StackOperation for FunctionStackOp {
     fn signature(&self) -> StackOpSignature {
         StackOpSignature {
-            flags: StackOpSignature::FLAG_SAVE_STACK | StackOpSignature::FLAG_RESET_STACK,
+            flags: StackOpSignature::FLAG_SAVE_STACK
+                | StackOpSignature::FLAG_RESET_STACK
+                | StackOpSignature::FLAG_IMPURE,
             ..Default::default()
         }
     }
@@ -114,8 +116,16 @@ impl StackOperation for FunctionStackOp {
             FunctionOperation::RETURN => {
                 self.scope.execute(stack, comp)?;
 
-                comp.instruct(MemOperation::LOAD.instr(cpu::Register::R2, cpu::Register::SP, -2)?);
-                comp.instruct(MemOperation::LOAD.instr(cpu::Register::SP, cpu::Register::SP, -1)?);
+                comp.instruct(MemOperation::LOAD.instr(
+                    cpu::Register::R2,
+                    cpu::Register::SP,
+                    -2,
+                )?);
+                comp.instruct(MemOperation::LOAD.instr(
+                    cpu::Register::SP,
+                    cpu::Register::SP,
+                    -1,
+                )?);
                 comp.instruct(AluOperation::MOV.instr(
                     cpu::Register::PC,
                     cpu::Register::R2,

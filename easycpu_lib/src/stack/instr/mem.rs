@@ -35,6 +35,11 @@ impl StackOperation for MemStackOp {
       let (takes, pushes) = self.match_takes_pushes();
       StackOpSignature {
           takes, pushes,
+          flags: if matches!(self.op, MemOperation::STORE) {
+            StackOpSignature::FLAG_IMPURE
+          } else {
+            Default::default()
+          },
           ..Default::default()
       }
   }

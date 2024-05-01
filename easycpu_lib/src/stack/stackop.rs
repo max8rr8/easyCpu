@@ -18,6 +18,7 @@ pub struct StackOpSignature {
 impl StackOpSignature {
     pub const FLAG_SAVE_STACK: u16 = 1 << 0;
     pub const FLAG_RESET_STACK: u16 = 1 << 1;
+    pub const FLAG_IMPURE: u16 = 1 << 2;
 
     pub fn check(&self, other: u16) -> bool {
         self.flags & other != 0
@@ -92,6 +93,13 @@ pub fn compile_stackop(
     mut op: Box<dyn StackOperation>,
 ) -> Result<(), CompileError> {
     let signature = op.signature();
+
+    if signature.pushes == 0 && !signature.check(StackOpSignature::FLAG_IMPURE) {
+        let mut shift = -(signature.takes as i8);
+        apply_stack_shift(comp, &mut shift);
+        return Ok(());
+    }
+
     let mut stack_exec = StackExecCtx {
         inps: vec![
             cpu::Register::R2,

@@ -25,7 +25,7 @@ impl StackOperation for JumpStackOp {
                 JumpOperation::JMP => 0,
                 _ => 1,
             },
-            flags: StackOpSignature::FLAG_SAVE_STACK,
+            flags: StackOpSignature::FLAG_SAVE_STACK | StackOpSignature::FLAG_IMPURE,
             ..Default::default()
         }
     }

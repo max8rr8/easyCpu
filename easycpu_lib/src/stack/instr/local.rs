@@ -90,13 +90,16 @@ impl StackOperation for LocalStackOp {
     fn signature(&self) -> StackOpSignature {
         match self.op {
             LocalOperation::LOCINIT | LocalOperation::LOCEND => StackOpSignature {
-                flags: StackOpSignature::FLAG_SAVE_STACK | StackOpSignature::FLAG_RESET_STACK,
+                flags: StackOpSignature::FLAG_SAVE_STACK
+                    | StackOpSignature::FLAG_RESET_STACK
+                    | StackOpSignature::FLAG_IMPURE,
                 ..Default::default()
             },
 
             LocalOperation::STORE(_) => StackOpSignature {
                 takes: 1,
                 temps: 1,
+                flags: StackOpSignature::FLAG_IMPURE,
                 ..Default::default()
             },
 
