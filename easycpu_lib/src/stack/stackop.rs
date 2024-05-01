@@ -90,7 +90,7 @@ fn apply_stack_shift(comp: &mut dyn CompContext, stack_shift: &mut i8) {
 
 pub fn compile_stackop(
     comp: &mut dyn CompContext,
-    mut op: Box<dyn StackOperation>,
+    op: Box<dyn StackOperation>,
 ) -> Result<(), CompileError> {
     let signature = op.signature();
 

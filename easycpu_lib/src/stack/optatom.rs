@@ -1,19 +1,48 @@
 use std::{mem, rc::Rc};
 
-use crate::{compile::{
-    comp::CompContext,
-    label::LabelScope,
-    status::ContextStatus,
-    Atom, AtomBox, CompileError,
-}, cpu};
+use crate::{
+    compile::{
+        comp::CompContext, label::LabelScope, status::ContextStatus, Atom, AtomBox, CompileError,
+    },
+    cpu, stack::opt,
+};
+
+use super::{StackOpSignature, StackOperation};
+
+#[derive(Clone, Copy, Debug)]
+struct LabelStackOp {
+    label_id: usize,
+}
+
+impl StackOperation for LabelStackOp {
+    fn signature(&self) -> StackOpSignature {
+        StackOpSignature {
+            flags: StackOpSignature::FLAG_SAVE_STACK | StackOpSignature::FLAG_RESET_STACK,
+            ..Default::default()
+        }
+    }
+
+    fn execute(
+        &self,
+        _: &mut super::StackExecCtx,
+        comp: &mut dyn CompContext,
+    ) -> Result<(), CompileError> {
+        comp.emit_label(self.label_id)
+    }
+
+    fn duplicate(&self) -> Box<dyn StackOperation> {
+        Box::new(*self)
+    }
+}
 
 pub struct StackOptComp {
     status: Rc<ContextStatus>,
+    ops: Vec<Box<dyn super::StackOperation>>,
 }
 
 impl StackOptComp {
     pub fn new(status: Rc<ContextStatus>) -> Self {
-        StackOptComp { status }
+        StackOptComp { status, ops: Vec::new() }
     }
 }
 
@@ -27,16 +56,17 @@ impl CompContext for StackOptComp {
         0
     }
 
-    fn emit_label(&mut self, _: usize) -> Result<(), CompileError> {
-        Err(CompileError::InstructionInStackopt)
+    fn emit_label(&mut self, label_id: usize) -> Result<(), CompileError> {
+        self.ops.push(Box::new(LabelStackOp { label_id }));
+        Ok(())
     }
 
     fn resolve_label(&mut self, _: usize) -> Result<u16, CompileError> {
         Err(CompileError::InstructionInStackopt)
     }
-    
-    fn stack(&mut self, _: Box<dyn super::StackOperation>) {
-        dbg!("Stack in stackopt");
+
+    fn stack(&mut self, op: Box<dyn super::StackOperation>) {
+        self.ops.push(op);
     }
 }
 
@@ -61,12 +91,20 @@ impl Atom for StackOptAtom {
         }
 
         let mut comp: Box<dyn CompContext> = Box::new(StackOptComp::new(ctx.status.clone()));
-        
-        mem::swap(&mut ctx.comp, &mut comp);
 
+        mem::swap(&mut ctx.comp, &mut comp);
         self.scope.compile(ctx)?;
-
         mem::swap(&mut ctx.comp, &mut comp);
+
+        let comp_r: &mut StackOptComp = comp
+            .as_any_mut()
+            .downcast_mut()
+            .expect("Wtf compile contex");
+
+        let mut ops = Vec::new();
+        mem::swap(&mut ops, &mut comp_r.ops);
+
+        opt::comp::compile(ops, ctx.comp.as_mut())?;
 
         Ok(())
     }

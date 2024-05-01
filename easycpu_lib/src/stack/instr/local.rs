@@ -152,7 +152,7 @@ impl StackOperation for LocalStackOp {
 
             LocalOperation::STORE(mode) => {
                 Self::instruct_local_addr(comp, stack.temps[0], mode, self.idx)?;
-                comp.instruct(MemOperation::STORE.instr(stack.outs[0], stack.temps[0], 0)?);
+                comp.instruct(MemOperation::STORE.instr(stack.inps[0], stack.temps[0], 0)?);
             }
 
             LocalOperation::ADDR(mode) => {

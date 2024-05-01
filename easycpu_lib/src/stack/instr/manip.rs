@@ -1,6 +1,5 @@
 use crate::{
-    compile::{comp::CompContext, CompileError},
-    stack::{StackOpSignature, StackOperation},
+    compile::{comp::CompContext, CompileError}, cpu, stack::{StackOpSignature, StackOperation}
 };
 
 #[derive(Clone, Copy, Debug)]
@@ -8,6 +7,7 @@ enum ManipStackOperation {
     Swp,
     Dup,
     Drop,
+    Puzx,
 }
 
 #[derive(Copy, Clone, Debug)]
@@ -34,11 +34,18 @@ impl ManipStackOp {
         }
     }
 
+    pub fn puzx() -> ManipStackOp {
+      ManipStackOp {
+          op: ManipStackOperation::Puzx,
+      }
+  }
+
     pub fn parse_asm(command_name: &str) -> Option<ManipStackOp> {
         match command_name {
             "SWP" => Some(ManipStackOp::swp()),
             "DUP" => Some(ManipStackOp::dup()),
             "DROP" => Some(ManipStackOp::drop()),
+            "PUZX" => Some(ManipStackOp::puzx()),
             _ => None,
         }
     }
@@ -62,6 +69,10 @@ impl StackOperation for ManipStackOp {
                 pushes: 0,
                 ..Default::default()
             },
+            ManipStackOperation::Puzx => StackOpSignature {
+              pushes: 1,
+              ..Default::default()
+            },
         }
     }
 
@@ -80,6 +91,9 @@ impl StackOperation for ManipStackOp {
                 stack.outs[1] = stack.inps[0];
             }
             ManipStackOperation::Drop => {}
+            ManipStackOperation::Puzx => {
+              stack.outs[0] = cpu::Register::ZX;
+            },
         }
         Ok(())
     }

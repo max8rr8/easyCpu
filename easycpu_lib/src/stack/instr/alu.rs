@@ -36,7 +36,11 @@ impl StackOperation for AluStackOp {
         stack: &mut crate::stack::StackExecCtx,
         comp: &mut dyn CompContext,
     ) -> Result<(), CompileError> {
-        comp.instruct(self.op.instr(stack.outs[0], stack.inps[0], stack.inps[1]));
+        comp.instruct(self.op.instr(
+            stack.outs[0],
+            stack.inps[0],
+            *stack.inps.get(1).unwrap_or(&cpu::Register::ZX),
+        ));
         Ok(())
     }
 
