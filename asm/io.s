@@ -100,7 +100,7 @@ $SVAR 0
 
 $PUSH ZX
 $CALL READ_CHAR
-$POP ZX
+$DROP
 
 # IS: if(ch == '+')
 $LVAR 0

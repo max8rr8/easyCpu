@@ -146,7 +146,7 @@ READ_OP: {
   NO_PROMPT:
 
   $CALL READ_STRING ($PLABEL BUF; $PCONST 1)
-  $POP ZX
+  $DROP
 
   $LOAD ($PLABEL BUF) # Load char from buf onto stack
 
@@ -162,7 +162,7 @@ READ_OP: {
     $SARG 0 ($PCONST 3); $RET
   IFNOT: }
 
-  $POP zx
+  $DROP
 
   $PLABEL UNKNOWN_OPERATION
   $CALL PRINT_STRING
@@ -192,7 +192,7 @@ MATCH_CHAR_TO_NUM: {
 
     $SARG 1; $RET
     
-    IFNOT: $POP ZX 
+    IFNOT: $DROP 
   }
 
   { # Check a-f & A-F 
@@ -210,7 +210,7 @@ MATCH_CHAR_TO_NUM: {
     $ACONST 10
     $SARG 1; $RET
     
-    IFNOT: $POP ZX 
+    IFNOT: $DROP 
   }
 
   $SARG 0 ($PCONST 0)
@@ -263,7 +263,7 @@ READ_NUM_16: {
   
   $PUSH ZX
   $JLE FAIL_READ ($LVAR 0) # <= back_point - buf_start
-  $POP ZX
+  $DROP
 
   $SVAR 1 ($PLABEL BUF)
   $SARG 0 ($PUSH ZX)
@@ -286,7 +286,7 @@ READ_NUM_16: {
   JMP READ_LOOP
 
   FAIL_READ:
-  $POP ZX
+  $DROP
   $CALL PRINT_STRING ($PLABEL INVALID_NUMBER)
   JMP LOOP
   
@@ -311,15 +311,15 @@ EXECUTE_OPERATION: {
   $LARG 2
 
   { $JNE IFNOT ($DUP; $ACONST -1)   # op plus
-  $POP ZX; $ADD; $SARG 2; $RET
+  $DROP; $ADD; $SARG 2; $RET
   IFNOT: }
 
   { $JNE IFNOT ($DUP; $ACONST -2)   # op sub
-  $POP ZX; $SUB; $SARG 2; $RET
+  $DROP; $SUB; $SARG 2; $RET
   IFNOT: }
 
   { $JNE IFNOT ($DUP; $ACONST -3)   # op plus
-  $POP ZX; $AND; $SARG 2; $RET
+  $DROP; $AND; $SARG 2; $RET
   IFNOT: }
 
   HALT
@@ -374,10 +374,10 @@ MAIN: {
   $CALL PRINT_STRING ($PLABEL GOODBYE)
 
   # Wait a little
-  $PUSH ZX; $POP ZX;
-  $PUSH ZX; $POP ZX;
-  $PUSH ZX; $POP ZX;
-  $PUSH ZX; $POP ZX;
+  $PUSH ZX; $DROP;
+  $PUSH ZX; $DROP;
+  $PUSH ZX; $DROP;
+  $PUSH ZX; $DROP;
 
   HALT
 

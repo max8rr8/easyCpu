@@ -21,7 +21,7 @@ impl CallStackOp {
 impl StackOperation for CallStackOp {
     fn signature(&self) -> StackOpSignature {
         StackOpSignature {
-            flags: StackOpSignature::FLAG_RESET_STACK | StackOpSignature::FLAG_SAVE_STACK,
+            flags: StackOpSignature::FLAG_RESET_STACK | StackOpSignature::FLAG_SAVE_STACK ,
             ..Default::default()
         }
     }

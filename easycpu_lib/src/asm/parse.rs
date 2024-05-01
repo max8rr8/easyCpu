@@ -2,16 +2,16 @@ use std::collections::VecDeque;
 use std::str::Chars;
 
 use super::custom::{CustomInstruction, CustomMultiInstruction, NopInstruction};
+use super::pushpop::{PushPopInstruction, PushPopOperation};
 use crate::compile::label::LabelScope;
 use crate::compile::{AtomBox, CompileError, ErrorAtom, Label};
-
-use crate::asm::jump::{JumpInstruction, JumpOperation};
-use crate::asm::load_label::LoadLabelInstruction;
-use crate::asm::stack;
+use crate::stack;
 
 use crate::asm::alu::{AluInstruction, AluOperation};
 use crate::asm::branch::BranchInstruction;
+use crate::asm::jump::{JumpInstruction, JumpOperation};
 use crate::asm::load_const::{LoadConstInstruction, LoadConstOperation};
+use crate::asm::load_label::LoadLabelInstruction;
 use crate::asm::mem::{MemInstruction, MemOperation};
 use crate::cpu;
 use crate::parser::parse::{end_checker, letter_checker, nummeric_checker};
@@ -77,7 +77,12 @@ fn parse_instruction(s: String) -> Result<AtomBox, CompileError> {
     }
 
     if let Some(stripped_cmd) = command_pure.strip_prefix('$') {
-        return stack::parse_instruction(stripped_cmd, command_flags, parts);
+        if let Some(base_op) = PushPopOperation::parse_operation(stripped_cmd) {
+            let ins = PushPopInstruction::parse_asm(base_op, parts)?;
+            return Ok(Box::new(ins));
+        };
+
+        return stack::instr::parse_instruction(stripped_cmd, command_flags, parts);
     }
 
     Err(CompileError::UnknownCommand(String::from(command_pure)))

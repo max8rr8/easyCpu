@@ -6,7 +6,7 @@ pub mod jump;
 pub mod load_const;
 pub mod load_label;
 pub mod mem;
-pub mod stack;
+pub mod pushpop;
 
 pub mod custom;
 pub mod disasm;
