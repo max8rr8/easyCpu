@@ -66,7 +66,7 @@ impl StackOperation for ManipStackOp {
     }
 
     fn execute(
-        &mut self,
+        &self,
         stack: &mut crate::stack::StackExecCtx,
         _: &mut dyn CompContext,
     ) -> Result<(), CompileError> {

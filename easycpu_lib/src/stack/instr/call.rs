@@ -29,7 +29,7 @@ impl StackOperation for CallStackOp {
     }
 
     fn execute(
-        &mut self,
+        &self,
         _: &mut crate::stack::StackExecCtx,
         comp: &mut dyn CompContext,
     ) -> Result<(), CompileError> {

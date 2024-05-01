@@ -34,7 +34,7 @@ pub struct StackExecCtx {
 pub trait StackOperation: Debug {
     fn signature(&self) -> StackOpSignature;
     fn execute(
-        &mut self,
+        &self,
         stack: &mut StackExecCtx,
         comp: &mut dyn CompContext,
     ) -> Result<(), CompileError>;

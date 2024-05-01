@@ -80,7 +80,7 @@ impl StackOperation for FunctionStackOp {
     }
 
     fn execute(
-        &mut self,
+        &self,
         stack: &mut crate::stack::StackExecCtx,
         comp: &mut dyn crate::compile::comp::CompContext,
     ) -> Result<(), CompileError> {

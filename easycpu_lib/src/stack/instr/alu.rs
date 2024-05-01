@@ -32,7 +32,7 @@ impl StackOperation for AluStackOp {
     }
 
     fn execute(
-        &mut self,
+        &self,
         stack: &mut crate::stack::StackExecCtx,
         comp: &mut dyn CompContext,
     ) -> Result<(), CompileError> {
