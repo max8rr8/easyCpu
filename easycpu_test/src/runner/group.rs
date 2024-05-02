@@ -1,0 +1,45 @@
+use super::{Test, TestContext, Testable};
+
+pub struct TestGroup {
+    name: String,
+    tests: Vec<Test>,
+}
+
+impl TestGroup {
+    pub fn new(name: impl Into<String>) -> TestGroup {
+      TestGroup { name: name.into(), tests: vec![] }
+    }
+
+    pub fn construct(name: impl Into<String>, tests: Vec<Test>) -> Test {
+        let name: String = name.into();
+        Test::new(name.clone(), TestGroup { name, tests })
+    }
+
+    pub fn add(&mut self, name: impl Into<String>, test: impl Testable + 'static) {
+      self.tests.push(Test::new(name.into(), test));
+    }
+}
+
+impl From<TestGroup> for Test {
+    fn from(val: TestGroup) -> Self {
+        Test::new(val.name.clone(), val)
+    }
+}
+
+impl Testable for TestGroup {
+    fn run(&self, ctx: &TestContext) -> Result<(), super::TestError> {
+        let new_ctx = TestContext {
+            log: if self.name.is_empty() {
+                ctx.log.clone()
+            } else {
+                ctx.log.create_nested(&self.name)
+            },
+        };
+
+        for test in &self.tests {
+            test.run(&new_ctx);
+        }
+
+        Ok(())
+    }
+}

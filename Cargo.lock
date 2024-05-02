@@ -121,6 +121,13 @@ name = "easycpu_lib"
 version = "0.1.0"
 
 [[package]]
+name = "easycpu_test"
+version = "0.1.0"
+dependencies = [
+ "easycpu_lib",
+]
+
+[[package]]
 name = "easycpu_wasm"
 version = "0.1.0"
 dependencies = [

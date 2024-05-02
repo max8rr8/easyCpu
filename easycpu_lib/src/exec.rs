@@ -2,6 +2,7 @@ use std::mem::swap;
 
 use crate::cpu;
 
+#[derive(Debug, Clone)]
 pub enum ExecEvent {
     NONE,
     JUMP(u16),
@@ -11,6 +12,7 @@ pub enum ExecEvent {
     MEMSET(u16, u16),
 }
 
+#[derive(Clone, Debug)]
 pub struct ExecCpu {
     pc: u16,
     registers: [u16; 6],

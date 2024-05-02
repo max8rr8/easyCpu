@@ -4,5 +4,6 @@ resolver = "2"
 members = [
     "easycpu_lib",
     "easycpu_cli",
-    "easycpu_wasm"
+    "easycpu_wasm", 
+    "easycpu_test",
 ]
