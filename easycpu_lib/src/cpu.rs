@@ -156,7 +156,7 @@ impl AluInstruction {
             if is_add {
                 x ^ y
             } else {
-                x << 1
+                x >> 1
             }
         } else {
             if self.nx {
