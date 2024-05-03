@@ -22,13 +22,19 @@ impl Test {
         }
     }
 
-    pub fn run(&self, ctx: &TestContext) {
-        match self.testable.run(ctx) {
+    pub fn run(&self, parent_log: &Logger) -> Result<(), TestError> {
+        let ctx = TestContext {
+            log: parent_log.create_nested(&self.name),
+        };
+
+        match self.testable.run(&ctx) {
             Ok(()) => {
-                ctx.log.report_success(&self.name);
+                ctx.log.report_success();
+                Ok(())
             }
             Err(err) => {
-                ctx.log.report_failure(&self.name, err);
+                ctx.log.report_failure(err.clone());
+                Err(err)
             }
         }
     }

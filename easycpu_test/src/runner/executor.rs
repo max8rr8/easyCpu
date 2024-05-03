@@ -1,7 +1,11 @@
-use easycpu_lib::{cpu, exec::ExecCpu};
+use easycpu_lib::{
+    cpu,
+    exec::{ExecCpu, ExecStats},
+};
 
-use super::{CompilableTest, TestContext, TestError, Testable};
+use super::{log::PerformanceLog, CompilableTest, TestContext, TestError, Testable};
 
+#[derive(Clone, Debug)]
 pub enum ExecCond {
     CheckReg(cpu::Register, u16),
     SetReg(cpu::Register, u16),
@@ -36,7 +40,7 @@ impl ExecCond {
 
                 for (i, val) in vals.iter().enumerate() {
                     TestError::check_eq(
-                        format!("Stack position {:#06x}", 0x4000u16 + (i as u16)),
+                        format!("stack element at {:#06x}", 0x4000u16 + (i as u16)),
                         *val,
                         cpu.get_mem(0x4000u16 + (i as u16)),
                     )?;
@@ -102,10 +106,15 @@ impl Executor {
 }
 
 impl Testable for Executor {
-    fn run(&self, _: &TestContext) -> Result<(), TestError> {
+    fn run(&self, ctx: &TestContext) -> Result<(), TestError> {
         let compiled = CompilableTest::compile(&self.code)?;
+        let program_len = compiled.len();
 
         let cpu = ExecCpu::new(compiled);
+
+        let mut stats = ExecStats {
+            ..Default::default()
+        };
 
         for cons in &self.combos {
             let mut cpu = cpu.clone();
@@ -124,8 +133,14 @@ impl Testable for Executor {
                 }
             }
 
+            stats += cpu.get_stats();
             Self::validate_conds(cpu, cons)?;
         }
+
+        ctx.log.report_perf(PerformanceLog {
+            exec: stats,
+            program_len,
+        });
 
         Ok(())
     }

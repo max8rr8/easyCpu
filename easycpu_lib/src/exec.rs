@@ -1,4 +1,4 @@
-use std::mem::swap;
+use std::{fmt::Debug, mem::swap, ops::AddAssign};
 
 use crate::cpu;
 
@@ -12,6 +12,25 @@ pub enum ExecEvent {
     MEMSET(u16, u16),
 }
 
+#[derive(Clone, Debug, Default)]
+pub struct ExecStats {
+    pub nop: usize,
+    pub branch: usize,
+    pub store: usize,
+    pub load: usize,
+    pub alu: usize,
+}
+
+impl AddAssign<&Self> for ExecStats {
+    fn add_assign(&mut self, rhs: &Self) {
+        self.nop += rhs.nop;
+        self.branch += rhs.branch;
+        self.store += rhs.store;
+        self.load += rhs.load;
+        self.alu += rhs.alu;
+    }
+}
+
 #[derive(Clone, Debug)]
 pub struct ExecCpu {
     pc: u16,
@@ -19,6 +38,7 @@ pub struct ExecCpu {
     mem: Vec<u16>,
     events: Vec<ExecEvent>,
     jumped: bool,
+    stats: ExecStats,
 }
 
 impl ExecCpu {
@@ -81,7 +101,16 @@ impl ExecCpu {
             mem: init_ram,
             events: Vec::new(),
             jumped: false,
+            stats: Default::default(),
         }
+    }
+
+    pub fn reset_stats(&mut self) {
+        self.stats = Default::default();
+    }
+
+    pub fn get_stats(&self) -> &ExecStats {
+        &self.stats
     }
 
     pub fn exec_next(&mut self) -> (cpu::Instruction, Vec<ExecEvent>) {
@@ -91,8 +120,18 @@ impl ExecCpu {
         self.events.clear();
 
         let ins = cpu::Instruction::decode(cur);
+
+        match ins {
+            cpu::Instruction::NOP => self.stats.nop += 1,
+            cpu::Instruction::AND(_) | cpu::Instruction::ADD(_) => self.stats.alu += 1,
+            cpu::Instruction::LOAD(_) => self.stats.load += 1,
+            cpu::Instruction::STORE(_) => self.stats.store += 1,
+            cpu::Instruction::BRANCH(_) => self.stats.branch += 1,
+            cpu::Instruction::CUSTOM(_) => self.stats.nop += 1,
+        }
+
         ins.execute(self);
-        
+
         if !self.jumped {
             self.pc += 1;
         }
@@ -102,5 +141,4 @@ impl ExecCpu {
 
         (ins, events)
     }
-
 }

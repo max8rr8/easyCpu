@@ -5,3 +5,5 @@ easycpu_lib/target
 target
 ram.bin
 test.s
+easycpu_test/perf.csv
+easycpu_test/report.html

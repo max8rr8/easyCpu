@@ -1,4 +1,4 @@
-use super::{Test, TestContext, Testable};
+use super::{Test, TestContext, TestError, Testable};
 
 pub struct TestGroup {
     name: String,
@@ -7,7 +7,10 @@ pub struct TestGroup {
 
 impl TestGroup {
     pub fn new(name: impl Into<String>) -> TestGroup {
-      TestGroup { name: name.into(), tests: vec![] }
+        TestGroup {
+            name: name.into(),
+            tests: vec![],
+        }
     }
 
     pub fn construct(name: impl Into<String>, tests: Vec<Test>) -> Test {
@@ -16,7 +19,7 @@ impl TestGroup {
     }
 
     pub fn add(&mut self, name: impl Into<String>, test: impl Testable + 'static) {
-      self.tests.push(Test::new(name.into(), test));
+        self.tests.push(Test::new(name.into(), test));
     }
 }
 
@@ -28,18 +31,17 @@ impl From<TestGroup> for Test {
 
 impl Testable for TestGroup {
     fn run(&self, ctx: &TestContext) -> Result<(), super::TestError> {
-        let new_ctx = TestContext {
-            log: if self.name.is_empty() {
-                ctx.log.clone()
-            } else {
-                ctx.log.create_nested(&self.name)
-            },
-        };
-
+        let log = ctx.log.create_nested("::");
+        
+        let mut had_error = false;
         for test in &self.tests {
-            test.run(&new_ctx);
+            had_error |= test.run(&log).is_err();
         }
 
-        Ok(())
+        if had_error {
+            Err(TestError::Elevating)
+        } else {
+            Ok(())
+        }
     }
 }

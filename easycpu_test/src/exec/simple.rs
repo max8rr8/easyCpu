@@ -47,7 +47,7 @@ pub fn simple() -> Test {
 }
 
 pub fn stack() -> Test {
-    let mut g = TestGroup::new("simple");
+    let mut g = TestGroup::new("stack");
 
     g.add(
         "init",
@@ -55,7 +55,7 @@ pub fn stack() -> Test {
     );
 
     g.add(
-        "push reg",
+        "push_reg",
         Executor::new(
             "$INIT; $PUSH R2",
             vec![
@@ -66,7 +66,7 @@ pub fn stack() -> Test {
     );
 
     g.add(
-        "pop reg",
+        "pop_reg",
         Executor::new(
             "$POP R2",
             vec![
