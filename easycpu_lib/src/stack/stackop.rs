@@ -1,7 +1,6 @@
-use std::{fmt::Debug, vec};
+use std::fmt::Debug;
 
 use crate::{
-    asm::{alu::AluOperation, mem::MemOperation},
     compile::{comp::CompContext, context::CompileContext, Atom, CompileError},
     cpu,
 };
@@ -66,86 +65,4 @@ impl Atom for StackOpInstruction {
         ctx.comp.stack(self.op.duplicate());
         Ok(())
     }
-}
-
-fn apply_stack_shift(comp: &mut dyn CompContext, stack_shift: &mut i8) {
-    while *stack_shift < 0 {
-        *stack_shift += 1;
-        comp.instruct(AluOperation::DEC.instr(
-            cpu::Register::SP,
-            cpu::Register::SP,
-            cpu::Register::ZX,
-        ));
-    }
-
-    while *stack_shift > 0 {
-        *stack_shift -= 1;
-        comp.instruct(AluOperation::INC.instr(
-            cpu::Register::SP,
-            cpu::Register::SP,
-            cpu::Register::ZX,
-        ));
-    }
-}
-
-pub fn compile_stackop(
-    comp: &mut dyn CompContext,
-    op: Box<dyn StackOperation>,
-) -> Result<(), CompileError> {
-    let signature = op.signature();
-
-    if signature.pushes == 0 && !signature.check(StackOpSignature::FLAG_IMPURE) {
-        let mut shift = -(signature.takes as i8);
-        apply_stack_shift(comp, &mut shift);
-        return Ok(());
-    }
-
-    let mut stack_exec = StackExecCtx {
-        inps: vec![
-            cpu::Register::R2,
-            cpu::Register::R3,
-            cpu::Register::R4,
-            cpu::Register::R5,
-        ],
-        outs: vec![
-            cpu::Register::R2,
-            cpu::Register::R3,
-            cpu::Register::R4,
-            cpu::Register::R5,
-        ],
-        temps: vec![],
-    };
-
-    for _ in 0..signature.temps {
-        stack_exec.temps.push(stack_exec.outs.pop().unwrap());
-    }
-
-    let mut stack_shift: i8 = 0;
-
-    for i in (0..signature.takes).rev() {
-        stack_shift -= 1;
-        comp.instruct(MemOperation::LOAD.instr(
-            stack_exec.inps[i],
-            cpu::Register::SP,
-            stack_shift,
-        )?);
-    }
-
-    if signature.check(StackOpSignature::FLAG_SAVE_STACK) {
-        apply_stack_shift(comp, &mut stack_shift);
-    }
-
-    op.execute(&mut stack_exec, comp)?;
-
-    for i in 0..signature.pushes {
-        comp.instruct(MemOperation::STORE.instr(
-            stack_exec.outs[i],
-            cpu::Register::SP,
-            stack_shift,
-        )?);
-        stack_shift += 1;
-    }
-
-    apply_stack_shift(comp, &mut stack_shift);
-    Ok(())
 }

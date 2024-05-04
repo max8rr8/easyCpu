@@ -51,6 +51,27 @@ pub fn simple() -> Test {
         ]),
     );
 
+
+
+    g.add(
+        "trickyjump",
+        StackOptExec::new(
+            "$PCONST 0x20
+            $PCONST 0
+            
+            $DUP
+            $JNE LLLL
+            $DROP
+            $ADD
+            LLLL:
+            ",
+            vec![
+                ExecCond::SetStack(vec![0x10]),
+                ExecCond::CheckStack(vec![0x30]),
+            ],
+        )
+    );
+
     g.add(
         "formnum",
         StackOptExec::new(
@@ -87,6 +108,64 @@ pub fn simple() -> Test {
         .add_case(vec![
             ExecCond::SetStack(vec![0xc4]),
             ExecCond::CheckStack(vec![0x63, 0x34]),
+        ]),
+    );
+
+
+    g.add(
+        "parsedigit",
+        StackOptExec::new(
+            "
+            { # Check 0-9 
+              $DUP; $ACONST -48
+              $JLT IFNOT ($DUP)                # >= '0'
+              $JGE IFNOT ($DUP; $ACONST -10)   # <= '9'
+          
+              $SWP; $DROP
+              $JMP END
+              
+              IFNOT: $DROP 
+            }
+          
+            { # Check a-f & A-F 
+              $DUP; $ACONST -97
+              
+              # If input is uppercase letter than after -97 result will be negative 0
+              # so we add 32 to match it with a-f
+              $JGE SKIP_UPPER_FIX ($DUP);
+              $ACONST 32
+              SKIP_UPPER_FIX:
+          
+              $JLT IFNOT ($DUP)                # >= '0'
+              $JGE IFNOT ($DUP; $ACONST -6)   # <= '9'
+          
+              $ACONST 10
+
+              $SWP; $DROP
+              $JMP END
+              
+              IFNOT: $DROP 
+            }
+
+            $DROP; $PCONST 0xdead
+            END:
+            ",
+            vec![
+                ExecCond::SetStack(vec![0x34]),
+                ExecCond::CheckStack(vec![4]),
+            ],
+        )
+        .add_case(vec![
+            ExecCond::SetStack(vec![0xff]),
+            ExecCond::CheckStack(vec![0xdead]),
+        ])
+        .add_case(vec![
+            ExecCond::SetStack(vec![0x61]),
+            ExecCond::CheckStack(vec![0xa]),
+        ])
+        .add_case(vec![
+            ExecCond::SetStack(vec![0x44]),
+            ExecCond::CheckStack(vec![0xd]),
         ]),
     );
 
