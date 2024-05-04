@@ -51,8 +51,6 @@ pub fn simple() -> Test {
         ]),
     );
 
-
-
     g.add(
         "trickyjump",
         StackOptExec::new(
@@ -69,7 +67,41 @@ pub fn simple() -> Test {
                 ExecCond::SetStack(vec![0x10]),
                 ExecCond::CheckStack(vec![0x30]),
             ],
-        )
+        ),
+    );
+
+    g.add(
+        "peeker",
+        StackOptExec::new(
+            "$PCONST 0x30
+            $PCONST 0x40
+          
+            $PEEK 1
+            $PEEK 3
+            $PEEK 5
+            $PEEK 7
+            ",
+            vec![
+                ExecCond::SetStack(vec![0x10, 0x20]),
+                ExecCond::CheckStack(vec![0x10, 0x20, 0x30, 0x40, 0x40, 0x30, 0x20, 0x10]),
+            ],
+        ),
+    );
+
+    g.add(
+        "fibonaci",
+        StackOptExec::new(
+            "$PCONST 0
+            $PCONST 1
+            $PEEK 2; $PEEK 2; $ADD
+            $PEEK 2; $PEEK 2; $ADD
+            $PEEK 2; $PEEK 2; $ADD
+            $PEEK 2; $PEEK 2; $ADD
+            $PEEK 2; $PEEK 2; $ADD
+            $PEEK 2; $PEEK 2; $ADD
+            ",
+            vec![ExecCond::CheckStack(vec![0, 1, 1, 2, 3, 5, 8, 13])],
+        ),
     );
 
     g.add(
@@ -110,7 +142,6 @@ pub fn simple() -> Test {
             ExecCond::CheckStack(vec![0x63, 0x34]),
         ]),
     );
-
 
     g.add(
         "parsedigit",
@@ -167,6 +198,17 @@ pub fn simple() -> Test {
             ExecCond::SetStack(vec![0x44]),
             ExecCond::CheckStack(vec![0xd]),
         ]),
+    );
+
+    g.add(
+        "dropmulti",
+        StackOptExec::new(
+            "$DROP 5",
+            vec![
+                ExecCond::SetStack(vec![0x10, 0x11, 0x12, 0x13, 0x14, 0x15]),
+                ExecCond::CheckStack(vec![0x10]),
+            ],
+        ),
     );
 
     g.into()

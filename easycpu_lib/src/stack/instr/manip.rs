@@ -1,12 +1,15 @@
 use crate::{
-    compile::{comp::CompContext, CompileError}, cpu, stack::{StackOpSignature, StackOperation}
+    compile::{comp::CompContext, CompileError},
+    cpu,
+    parser::ParseParts,
+    stack::{StackOpSignature, StackOperation},
 };
 
 #[derive(Clone, Copy, Debug)]
 enum ManipStackOperation {
     Swp,
-    Dup,
-    Drop,
+    Peek(u8),
+    Drop(u8),
     Puzx,
 }
 
@@ -24,30 +27,64 @@ impl ManipStackOp {
 
     pub fn dup() -> ManipStackOp {
         ManipStackOp {
-            op: ManipStackOperation::Dup,
+            op: ManipStackOperation::Peek(1),
         }
     }
 
-    pub fn drop() -> ManipStackOp {
+    pub fn peek(dist: u8) -> ManipStackOp {
         ManipStackOp {
-            op: ManipStackOperation::Drop,
+            op: ManipStackOperation::Peek(dist),
+        }
+    }
+
+    pub fn drop(count: u8) -> ManipStackOp {
+        ManipStackOp {
+            op: ManipStackOperation::Drop(count),
         }
     }
 
     pub fn puzx() -> ManipStackOp {
-      ManipStackOp {
-          op: ManipStackOperation::Puzx,
-      }
-  }
+        ManipStackOp {
+            op: ManipStackOperation::Puzx,
+        }
+    }
 
-    pub fn parse_asm(command_name: &str) -> Option<ManipStackOp> {
-        match command_name {
+    pub fn parse_asm(
+        command_name: &str,
+        parts: &mut ParseParts,
+    ) -> Result<Option<ManipStackOp>, CompileError> {
+        Ok(match command_name {
             "SWP" => Some(ManipStackOp::swp()),
             "DUP" => Some(ManipStackOp::dup()),
-            "DROP" => Some(ManipStackOp::drop()),
+
+            "PEEK" => {
+                let count = parts.pop_const()?;
+                let count: u8 = count
+                    .try_into()
+                    .map_err(|_| CompileError::ShiftIsTooBig(0))?;
+
+                if count == 0 {
+                    return Err(CompileError::ShiftIsTooBig(0));
+                }
+
+                Some(ManipStackOp::peek(count))
+            }
+
+            "DROP" => {
+                let count = parts.pop_const().unwrap_or(1);
+                let count: u8 = count
+                    .try_into()
+                    .map_err(|_| CompileError::ShiftIsTooBig(0))?;
+
+                if count == 0 {
+                    return Err(CompileError::ShiftIsTooBig(0));
+                }
+
+                Some(ManipStackOp::drop(count))
+            }
             "PUZX" => Some(ManipStackOp::puzx()),
             _ => None,
-        }
+        })
     }
 }
 
@@ -59,19 +96,19 @@ impl StackOperation for ManipStackOp {
                 pushes: 2,
                 ..Default::default()
             },
-            ManipStackOperation::Dup => StackOpSignature {
-                takes: 1,
-                pushes: 2,
+            ManipStackOperation::Peek(dist) => StackOpSignature {
+                peeks: Some(dist),
+                pushes: 1,
                 ..Default::default()
             },
-            ManipStackOperation::Drop => StackOpSignature {
-                takes: 1,
+            ManipStackOperation::Drop(count) => StackOpSignature {
+                takes: count as usize,
                 pushes: 0,
                 ..Default::default()
             },
             ManipStackOperation::Puzx => StackOpSignature {
-              pushes: 1,
-              ..Default::default()
+                pushes: 1,
+                ..Default::default()
             },
         }
     }
@@ -86,14 +123,13 @@ impl StackOperation for ManipStackOp {
                 stack.outs[0] = stack.inps[1];
                 stack.outs[1] = stack.inps[0];
             }
-            ManipStackOperation::Dup => {
-                stack.outs[0] = stack.inps[0];
-                stack.outs[1] = stack.inps[0];
+            ManipStackOperation::Peek(_) => {
+                stack.outs[0] = stack.peek.unwrap();
             }
-            ManipStackOperation::Drop => {}
+            ManipStackOperation::Drop(_) => {}
             ManipStackOperation::Puzx => {
-              stack.outs[0] = cpu::Register::ZX;
-            },
+                stack.outs[0] = cpu::Register::ZX;
+            }
         }
         Ok(())
     }

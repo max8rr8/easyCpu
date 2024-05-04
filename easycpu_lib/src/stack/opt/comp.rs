@@ -1,7 +1,7 @@
 use std::collections::VecDeque;
 
 use crate::{
-    asm::{alu::AluOperation, mem::MemOperation},
+    asm::{alu::AluOperation, load_const::LoadConstInstruction, mem::MemOperation},
     compile::{comp::CompContext, CompileError},
     cpu::{self, Register},
     stack::{StackExecCtx, StackOpSignature, StackOperation},
@@ -119,6 +119,38 @@ impl<'a> OptCompiler<'a> {
         reg
     }
 
+    fn load_peek(&mut self, mut peek: u8) -> cpu::Register {
+        for reg in self.stack_reg.iter().rev() {
+            peek -= 1;
+            if peek == 0 {
+                return *reg;
+            }
+        }
+        
+        let peek = self.sp_shift - peek as i8;
+
+        let reg = self.alloc_free_register(&[]);
+        if peek >= -3 {
+            self.comp.instruct(
+                MemOperation::LOAD
+                    .instr(reg, cpu::Register::SP, peek)
+                    .expect("Invalid mem"),
+            );
+        } else {
+            self.comp
+                .instruct(AluOperation::MOV.instr(reg, cpu::Register::SP, cpu::Register::ZX));
+
+            LoadConstInstruction::instr_add(reg, 0u16.wrapping_add_signed(peek.into()))
+                .into_iter()
+                .for_each(|i| self.comp.instruct(i));
+
+            self.comp
+                .instruct(MemOperation::LOAD.instr(reg, reg, 0).expect("Invalid mem"));
+        }
+
+        reg
+    }
+
     fn compile_one(&mut self, op: &dyn StackOperation) -> Result<(), CompileError> {
         let signature = op.signature();
 
@@ -126,6 +158,7 @@ impl<'a> OptCompiler<'a> {
             inps: vec![],
             outs: vec![],
             temps: vec![],
+            peek: None,
         };
 
         let really_load = signature.pushes != 0 || signature.check(StackOpSignature::FLAG_IMPURE);
@@ -158,6 +191,10 @@ impl<'a> OptCompiler<'a> {
             let reg = self.alloc_free_register(&used);
             stack_info.outs.push(reg);
             used.push(reg);
+        }
+
+        if let Some(peek) = signature.peeks {
+            stack_info.peek = Some(self.load_peek(peek));
         }
 
         op.execute(&mut stack_info, self.comp)?;

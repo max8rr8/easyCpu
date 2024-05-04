@@ -12,6 +12,8 @@ pub struct StackOpSignature {
     pub takes: usize,
     pub pushes: usize,
     pub temps: usize,
+
+    pub peeks: Option<u8>
 }
 
 impl StackOpSignature {
@@ -28,6 +30,7 @@ pub struct StackExecCtx {
     pub inps: Vec<cpu::Register>,
     pub outs: Vec<cpu::Register>,
     pub temps: Vec<cpu::Register>,
+    pub peek: Option<cpu::Register>
 }
 
 pub trait StackOperation: Debug {

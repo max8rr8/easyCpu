@@ -30,7 +30,7 @@ use super::StackOpInstruction;
 pub fn parse_instruction(
     command_pure: &str,
     command_flags: &str,
-    parts: ParseParts,
+    mut parts: ParseParts,
 ) -> Result<AtomBox, CompileError> {
     if let Some(base_op) = local::LocalOperation::parse_operation(command_pure) {
         let ins = LocalStackOp::parse_asm(base_op, parts)?;
@@ -52,7 +52,7 @@ pub fn parse_instruction(
         return Ok(StackOpInstruction::wrap_atombox(op));
     };
 
-    if let Some(op) = ManipStackOp::parse_asm(command_pure) {
+    if let Some(op) = ManipStackOp::parse_asm(command_pure, &mut parts)? {
       return Ok(StackOpInstruction::wrap_atombox(op));
     }
 
