@@ -5,6 +5,6 @@ mod simple;
 pub fn stack_test() -> Test {
     TestGroup::construct(
         "stack".to_owned(),
-        vec![simple::simple()],
+        vec![simple::simple(), simple::funcs()],
     )
 }

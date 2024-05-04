@@ -20,6 +20,7 @@ impl StackOpSignature {
     pub const FLAG_SAVE_STACK: u16 = 1 << 0;
     pub const FLAG_RESET_STACK: u16 = 1 << 1;
     pub const FLAG_IMPURE: u16 = 1 << 2;
+    pub const FLAG_NOT_CARE_SP: u16 = 1 << 3;
 
     pub fn check(&self, other: u16) -> bool {
         self.flags & other != 0

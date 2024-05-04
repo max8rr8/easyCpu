@@ -15,6 +15,11 @@ PRINT_CHAR: {
   ACONST r2 8
   STORE r2 r3 +1
 
+  # Slow down so it prints out fast enough
+  NOP;NOP;NOP;NOP;
+  NOP;NOP;NOP;NOP;
+  NOP;NOP;NOP;NOP;
+
   $RET # Return
 }
 

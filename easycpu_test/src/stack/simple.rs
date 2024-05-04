@@ -213,3 +213,84 @@ pub fn simple() -> Test {
 
     g.into()
 }
+
+pub fn funcs() -> Test {
+    let mut g = TestGroup::new("func");
+
+
+    g.add(
+        "simple",
+        StackOptExec::new(
+            "
+            $CALL FUNC
+            $CALL FUNC
+            $CALL FUNC
+            $CALL FUNC
+            $CALL FUNC
+            $JMP END        
+            
+            
+            FUNC:
+            $FUNC 0 1 1
+            $LARG 0
+            $INC
+            $SARG 0
+            $RET
+
+            END:
+            ",
+            vec![
+                ExecCond::SetStack(vec![0x10]),
+                ExecCond::CheckStack(vec![0x15]),
+            ],
+        ),
+    );
+
+
+    g.add(
+        "execute_op",
+        StackOptExec::new(
+            "
+            $CALL EXECUTE_OPERATION
+            $JMP END
+            
+            EXECUTE_OPERATION: {
+                #     2  1 0
+                # ARG op a b
+                # RET te
+                $FUNC 0 3 1
+              
+                $LARG 1
+                $LARG 0
+              
+                $LARG 2
+              
+                { $JNE IFNOT ($DUP; $ACONST -1)   # op plus
+                $DROP; $ADD; $SARG 2; $RET
+                IFNOT: }
+              
+                { $JNE IFNOT ($DUP; $ACONST -2)   # op sub
+                $DROP; $SUB; $SARG 2; $RET
+                IFNOT: }
+              
+                { $JNE IFNOT ($DUP; $ACONST -3)   # op plus
+                $DROP; $AND; $SARG 2; $RET
+                IFNOT: }
+              
+                # DIEEEEE
+            }
+
+            END:
+            ",
+            vec![
+                ExecCond::SetStack(vec![0x1, 0x10, 0x20]),
+                ExecCond::CheckStack(vec![0x30]),
+            ],
+        ).add_case(vec![
+            ExecCond::SetStack(vec![0x2, 0x20, 0x0f]),
+            ExecCond::CheckStack(vec![0x11]),
+        ],),
+    );
+
+    g.into()
+}

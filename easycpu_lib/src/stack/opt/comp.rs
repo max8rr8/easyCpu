@@ -3,7 +3,7 @@ use std::collections::VecDeque;
 use crate::{
     asm::{alu::AluOperation, load_const::LoadConstInstruction, mem::MemOperation},
     compile::{comp::CompContext, CompileError},
-    cpu::{self, Register},
+    cpu,
     stack::{StackExecCtx, StackOpSignature, StackOperation},
 };
 
@@ -90,11 +90,15 @@ impl<'a> OptCompiler<'a> {
         }
     }
 
-    fn save_stack(&mut self) {
+    fn save_stack(&mut self, not_care_sp: bool) {
         while !self.stack_reg.is_empty() {
             self.save_single();
         }
-        self.ensure_sp(0, 0);
+        if !not_care_sp {   
+            self.ensure_sp(0, 0);
+        } else {
+            self.sp_shift = 0;
+        }
     }
 
     fn load_one_into_reg(&mut self, used: &[cpu::Register], actually_load: bool) -> cpu::Register {
@@ -174,7 +178,7 @@ impl<'a> OptCompiler<'a> {
         stack_info.inps.reverse();
 
         if signature.check(StackOpSignature::FLAG_SAVE_STACK) {
-            self.save_stack();
+            self.save_stack(signature.check(StackOpSignature::FLAG_NOT_CARE_SP));
             if signature.check(StackOpSignature::FLAG_RESET_STACK) {
                 self.spec_saved.clear();
             }
@@ -217,7 +221,7 @@ pub fn compile(
         compiler.compile_one(op.as_ref())?;
     }
 
-    compiler.save_stack();
+    compiler.save_stack(false);
 
     Ok(())
 }
@@ -228,6 +232,6 @@ pub fn compile_stackop(
 ) -> Result<(), CompileError> {
     let mut compiler = OptCompiler::new(comp);
     compiler.compile_one(op.as_ref())?;
-    compiler.save_stack();
+    compiler.save_stack(false);
     Ok(())
 }

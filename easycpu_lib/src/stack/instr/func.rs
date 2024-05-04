@@ -71,10 +71,15 @@ impl FunctionStackOp {
 
 impl StackOperation for FunctionStackOp {
     fn signature(&self) -> StackOpSignature {
+        let mut flags = StackOpSignature::FLAG_SAVE_STACK | StackOpSignature::FLAG_IMPURE;
+        
+        flags |= match self.op {
+            FunctionOperation::INIT => StackOpSignature::FLAG_RESET_STACK,
+            FunctionOperation::RETURN => StackOpSignature::FLAG_NOT_CARE_SP,
+        };
+
         StackOpSignature {
-            flags: StackOpSignature::FLAG_SAVE_STACK
-                | StackOpSignature::FLAG_RESET_STACK
-                | StackOpSignature::FLAG_IMPURE,
+            flags,
             ..Default::default()
         }
     }

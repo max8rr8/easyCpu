@@ -65,20 +65,24 @@ impl LocalStackOp {
         LocalStackOp::new(op, idx)
     }
 
+    fn compute_local_addr(mode: StackLocalMode, idx: u16) -> i16 {
+        match mode {
+            StackLocalMode::VAR => idx as i16 + 1,
+            StackLocalMode::ARG => -3i16 - idx as i16,
+        }
+    }
+
     fn instruct_local_addr(
         comp: &mut dyn CompContext,
         out: cpu::Register,
         mode: StackLocalMode,
         idx: u16,
     ) -> Result<(), CompileError> {
-        let shift = match mode {
-            StackLocalMode::VAR => idx,
-            StackLocalMode::ARG => 0u16.wrapping_sub(4).wrapping_sub(idx),
-        };
+        let shift = Self::compute_local_addr(mode, idx);
 
         comp.instruct(AluOperation::MOV.instr(out, cpu::Register::LP, cpu::Register::SP));
 
-        LoadConstInstruction::instr_add(out, shift)
+        LoadConstInstruction::instr_add(out, 0u16.wrapping_add_signed(shift))
             .into_iter()
             .for_each(|i| comp.instruct(i));
 
@@ -89,10 +93,18 @@ impl LocalStackOp {
 impl StackOperation for LocalStackOp {
     fn signature(&self) -> StackOpSignature {
         match self.op {
-            LocalOperation::LOCINIT | LocalOperation::LOCEND => StackOpSignature {
+            LocalOperation::LOCINIT => StackOpSignature {
                 flags: StackOpSignature::FLAG_SAVE_STACK
                     | StackOpSignature::FLAG_RESET_STACK
                     | StackOpSignature::FLAG_IMPURE,
+                ..Default::default()
+            },
+
+            LocalOperation::LOCEND => StackOpSignature {
+                flags: StackOpSignature::FLAG_SAVE_STACK
+                    | StackOpSignature::FLAG_RESET_STACK
+                    | StackOpSignature::FLAG_IMPURE
+                    | StackOpSignature::FLAG_NOT_CARE_SP,
                 ..Default::default()
             },
 
@@ -123,7 +135,7 @@ impl StackOperation for LocalStackOp {
                     0,
                 )?);
 
-                comp.instruct(AluOperation::INC.instr(
+                comp.instruct(AluOperation::MOV.instr(
                     cpu::Register::LP,
                     cpu::Register::SP,
                     cpu::Register::ZX,
@@ -135,7 +147,7 @@ impl StackOperation for LocalStackOp {
             }
 
             LocalOperation::LOCEND => {
-                comp.instruct(AluOperation::DEC.instr(
+                comp.instruct(AluOperation::MOV.instr(
                     cpu::Register::SP,
                     cpu::Register::LP,
                     cpu::Register::ZX,
@@ -145,14 +157,24 @@ impl StackOperation for LocalStackOp {
             }
 
             LocalOperation::LOAD(mode) => {
-                Self::instruct_local_addr(comp, stack.outs[0], mode, self.idx)?;
+                let shift = Self::compute_local_addr(mode, self.idx);
+                if (-3..=3).contains(&shift) {                
+                    comp.instruct(MemOperation::LOAD.instr(stack.outs[0], cpu::Register::LP, shift as i8)?);
+                } else {
+                    Self::instruct_local_addr(comp, stack.outs[0], mode, self.idx)?;
+                    comp.instruct(MemOperation::LOAD.instr(stack.outs[0], stack.outs[0], 0)?);
+                }
 
-                comp.instruct(MemOperation::LOAD.instr(stack.outs[0], stack.outs[0], 0)?);
             }
 
             LocalOperation::STORE(mode) => {
-                Self::instruct_local_addr(comp, stack.temps[0], mode, self.idx)?;
-                comp.instruct(MemOperation::STORE.instr(stack.inps[0], stack.temps[0], 0)?);
+                let shift = Self::compute_local_addr(mode, self.idx);
+                if (-3..=3).contains(&shift) {                
+                    comp.instruct(MemOperation::STORE.instr(stack.inps[0], cpu::Register::LP, shift as i8)?);
+                } else {
+                    Self::instruct_local_addr(comp, stack.temps[0], mode, self.idx)?;
+                    comp.instruct(MemOperation::STORE.instr(stack.inps[0], stack.temps[0], 0)?);
+                }
             }
 
             LocalOperation::ADDR(mode) => {
