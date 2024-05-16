@@ -6,7 +6,7 @@ use crate::{
 };
 
 #[derive(Clone, Copy, Debug)]
-enum ManipStackOperation {
+pub enum ManipStackOperation {
     Swp,
     Peek(u8),
     Drop(u8),
@@ -15,7 +15,7 @@ enum ManipStackOperation {
 
 #[derive(Copy, Clone, Debug)]
 pub struct ManipStackOp {
-    op: ManipStackOperation,
+    pub op: ManipStackOperation,
 }
 
 impl ManipStackOp {

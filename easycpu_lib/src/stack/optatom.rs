@@ -104,6 +104,7 @@ impl Atom for StackOptAtom {
         let mut ops = Vec::new();
         mem::swap(&mut ops, &mut comp_r.ops);
 
+        let ops = opt::optim::optimize(ops);
         opt::comp::compile(ops, ctx.comp.as_mut())?;
 
         Ok(())

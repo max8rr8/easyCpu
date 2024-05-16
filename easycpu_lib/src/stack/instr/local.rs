@@ -8,7 +8,7 @@ use crate::asm::alu::AluOperation;
 use crate::asm::load_const::LoadConstInstruction;
 use crate::stack::{StackOpSignature, StackOperation};
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub enum StackLocalMode {
     VAR,
     ARG,

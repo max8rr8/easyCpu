@@ -2,7 +2,7 @@ use std::fmt::Debug;
 
 use crate::{
     compile::{comp::CompContext, context::CompileContext, Atom, CompileError},
-    cpu,
+    cpu, AsAny,
 };
 
 #[derive(Debug, Default)]
@@ -34,7 +34,7 @@ pub struct StackExecCtx {
     pub peek: Option<cpu::Register>
 }
 
-pub trait StackOperation: Debug {
+pub trait StackOperation: Debug + AsAny {
     fn signature(&self) -> StackOpSignature;
     fn execute(
         &self,
