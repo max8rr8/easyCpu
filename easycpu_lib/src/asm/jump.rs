@@ -6,7 +6,7 @@ use super::mem::MemOperation;
 use crate::compile::CompileError;
 use crate::compile::{CompileContext, Atom};
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub enum JumpOperation {
     JMP,
     JEQ,

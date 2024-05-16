@@ -4,7 +4,7 @@ pub fn optim_simpl() -> Test {
     let mut g = TestGroup::new("optim_simple");
 
     g.add(
-        "drop test",
+        "drop_test",
         StackOptExec::new(
             "$PCONST 123
         $PCONST 109
@@ -14,6 +14,23 @@ pub fn optim_simpl() -> Test {
             vec![ExecCond::CheckStack(vec![])],
         ),
     );
+
+
+    g.add(
+      "plabel_shift",
+      StackOptExec::new(
+          "$PLABEL DATA
+      $PCONST 2
+      $ADD
+      $ACONST 1
+      $LOAD
+      }
+      DATA: 1 2 3 4 5 6  
+      {
+      ",
+          vec![ExecCond::CheckStack(vec![4])],
+      ),
+  );
 
     g.into()
 }

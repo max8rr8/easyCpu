@@ -8,11 +8,12 @@ use crate::stack::{StackOpSignature, StackOperation};
 #[derive(Copy, Clone, Debug)]
 pub struct LabelStackOp {
     pub label_id: usize,
+    pub shift: u16,
 }
 
 impl LabelStackOp {
     pub fn new(label_id: usize) -> Self {
-        Self { label_id }
+        Self { label_id, shift: 0 }
     }
 }
 
@@ -29,7 +30,7 @@ impl StackOperation for LabelStackOp {
         stack: &mut crate::stack::StackExecCtx,
         comp: &mut dyn CompContext,
     ) -> Result<(), CompileError> {
-        LoadLabelInstruction::instr(comp, stack.outs[0], self.label_id)
+        LoadLabelInstruction::instr_shift(comp, stack.outs[0], self.label_id, self.shift)
     }
 
     fn duplicate(&self) -> Box<dyn StackOperation> {

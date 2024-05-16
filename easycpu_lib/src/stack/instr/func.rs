@@ -8,7 +8,7 @@ use crate::asm::load_const::LoadConstInstruction;
 use crate::stack::instr::local::{LocalOperation, LocalStackOp};
 use crate::stack::{StackOpSignature, StackOperation};
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub enum FunctionOperation {
     INIT,
     RETURN,

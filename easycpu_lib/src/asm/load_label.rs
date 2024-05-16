@@ -28,12 +28,13 @@ impl LoadLabelInstruction {
         LoadLabelInstruction::new(dst, label)
     }
 
-    pub fn instr(
+    pub fn instr_shift(
         comp: &mut dyn CompContext,
         dst: cpu::Register,
         label_id: usize,
+        shift: u16,
     ) -> Result<(), CompileError> {
-        let targ_pos = comp.resolve_label(label_id)?;
+        let targ_pos = comp.resolve_label(label_id)?.wrapping_add(shift);
 
         if dst != cpu::Register::PC {
             comp.instruct(AluOperation::MOV.instr(dst, cpu::Register::PC, cpu::Register::ZX));
@@ -45,6 +46,14 @@ impl LoadLabelInstruction {
         }
 
         Ok(())
+    }
+
+    pub fn instr(
+        comp: &mut dyn CompContext,
+        dst: cpu::Register,
+        label_id: usize,
+    ) -> Result<(), CompileError> {
+        Self::instr_shift(comp, dst, label_id, 0)
     }
 }
 

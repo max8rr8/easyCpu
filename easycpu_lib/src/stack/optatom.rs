@@ -10,11 +10,11 @@ use crate::{
 use super::{StackOpSignature, StackOperation};
 
 #[derive(Clone, Copy, Debug)]
-struct LabelStackOp {
+pub struct LabelMarkStackOp {
     label_id: usize,
 }
 
-impl StackOperation for LabelStackOp {
+impl StackOperation for LabelMarkStackOp {
     fn signature(&self) -> StackOpSignature {
         StackOpSignature {
             flags: StackOpSignature::FLAG_SAVE_STACK | StackOpSignature::FLAG_RESET_STACK,
@@ -57,7 +57,7 @@ impl CompContext for StackOptComp {
     }
 
     fn emit_label(&mut self, label_id: usize) -> Result<(), CompileError> {
-        self.ops.push(Box::new(LabelStackOp { label_id }));
+        self.ops.push(Box::new(LabelMarkStackOp { label_id }));
         Ok(())
     }
 

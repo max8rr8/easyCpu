@@ -1,12 +1,9 @@
 use crate::{
-    asm::alu::AluOperation,
+    asm::{alu::AluOperation, jump::JumpOperation},
     stack::{
         instr::{
-            local::LocalOperation,
-            manip::{ManipStackOp, ManipStackOperation},
-            AluStackOp, ConstStackOp, LocalStackOp,
-        },
-        StackOperation,
+            func::FunctionOperation, local::LocalOperation, manip::{ManipStackOp, ManipStackOperation}, AluStackOp, ConstStackOp, FunctionStackOp, JumpStackOp, LabelStackOp, LocalStackOp
+        }, optatom::LabelMarkStackOp, StackOperation
     },
 };
 
@@ -150,6 +147,57 @@ fn optimize_drop_pure(ctx: &mut OptimizationCtx) -> bool {
     true
 }
 
+
+fn optimize_jmp_ret_clean(ctx: &mut OptimizationCtx) -> bool {
+  if let Some(ret_op) = ctx.look_as::<FunctionStackOp>(2) {
+      if ret_op.op != FunctionOperation::RETURN {
+          return false;
+      }
+  } else if let Some(jmp_op) = ctx.look_as::<JumpStackOp>(2) {
+      if jmp_op.op != JumpOperation::JMP {
+          return false;
+      }
+  } else {
+      return false;
+  }
+
+  if ctx.look_as::<LabelMarkStackOp>(1).is_some() {
+      return false;
+  }
+
+  ctx.take();
+
+  true
+}
+
+
+fn optimize_label_aconst(ctx: &mut OptimizationCtx) -> bool {
+  let Some(cons_op) = ctx.look_as::<ConstStackOp>(1) else {
+    return false;
+  };
+
+  if !cons_op.do_add {
+    return false;
+  }
+
+  let shift = cons_op.val;
+
+  let Some(label_op) = ctx.look_as::<LabelStackOp>(2) else {
+      return false;
+  };
+
+  let mut newl = *label_op;
+
+  ctx.take();
+  ctx.take();
+
+  newl.shift = newl.shift.wrapping_add(shift);
+  ctx.queue(newl);
+
+  true
+}
+
+
 pub fn optimize(ops: Vec<Box<dyn StackOperation>>) -> Vec<Box<dyn StackOperation>> {
     let mut ctx = OptimizationCtx {
         compiled: Vec::new(),
@@ -161,6 +209,8 @@ pub fn optimize(ops: Vec<Box<dyn StackOperation>>) -> Vec<Box<dyn StackOperation
         if optimize_svar_lvar(&mut ctx)
             || optimize_pconst_add(&mut ctx)
             || optimize_drop_pure(&mut ctx)
+            || optimize_jmp_ret_clean(&mut ctx)
+            || optimize_label_aconst(&mut ctx)
         {
             continue;
         } else if let Some(op) = ctx.queue.pop() {
