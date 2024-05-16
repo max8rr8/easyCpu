@@ -9,6 +9,7 @@ class CpuMemoryView {
     el: HTMLTableElement
     app: App
     currentAddress: number
+    selectedAddress: number
 
     rowTitleCells: HTMLTableCellElement[]
     memoryInputs: HTMLInputElement[]
@@ -24,10 +25,9 @@ class CpuMemoryView {
         this.el = document.createElement('table')
         this.el.className = 'memoryView'
         this.currentAddress = 0x4000
+        this.selectedAddress = 0x4000
         this.rowTitleCells = []
         this.memoryInputs = []
-
-        // this.
 
         const headerRow = document.createElement('tr')
         {
@@ -38,11 +38,11 @@ class CpuMemoryView {
 
         {
             const addrCell = document.createElement('td')
-            addrCell.innerText = ' to view: '
+            addrCell.innerText = ''
             addrCell.colSpan = 1000
             this.posInput = document.createElement('input')
             this.posInput.addEventListener('change', () => {
-                this.currentAddress = parseInt(this.posInput.value) & 0xffff
+                this.selectedAddress = parseInt(this.posInput.value)
                 this.update()
             })
             addrCell.append(this.posInput)
@@ -61,18 +61,7 @@ class CpuMemoryView {
             for (let col = 0; col < 4; col++) {
                 const relPos = row * 4 + col
                 const tableCell = document.createElement('td')
-
-                const inp = document.createElement('input')
-                inp.addEventListener('change', () => {
-                    this.app.exec.write_memory(
-                        this.currentAddress + relPos,
-                        parseInt(inp.value)
-                    )
-                    this.update()
-                })
-                this.memoryInputs.push(inp)
-
-                tableCell.append(inp)
+                this.initMemCell(relPos, tableCell)
                 tableRow.append(tableCell)
             }
             this.el.append(tableRow)
@@ -84,11 +73,17 @@ class CpuMemoryView {
 
             while (this.scrollShift < -step) {
                 this.currentAddress -= 4
+                if (!this.selectedVisible()) {
+                    this.selectedAddress -= 4
+                }
                 this.scrollShift += step
             }
 
             while (this.scrollShift > step) {
                 this.currentAddress += 4
+                if (!this.selectedVisible()) {
+                    this.selectedAddress += 4
+                }
                 this.scrollShift -= step
             }
 
@@ -99,8 +94,39 @@ class CpuMemoryView {
         this.app.addEventListener('exec', () => this.update())
     }
 
+    selectedVisible() {
+        const diff = this.selectedAddress - this.currentAddress
+        return diff >= this.minRow * 4 && diff < this.maxRow * 4
+    }
+
+    initMemCell(relPos: number, cell: HTMLTableCellElement) {
+        const inp = document.createElement('input')
+        inp.addEventListener('change', () => {
+            this.app.exec.write_memory(
+                this.currentAddress + relPos,
+                parseInt(inp.value)
+            )
+            this.update()
+        })
+
+        inp.addEventListener('focus', () => {
+            const newAddr = (this.currentAddress + relPos) & 0xffff
+            if (newAddr != this.selectedAddress) {
+                this.selectedAddress = newAddr
+                this.update()
+            }
+        })
+
+        this.memoryInputs.push(inp)
+
+        cell.append(inp)
+    }
+
     update() {
-        this.posInput.value = formatVal(this.currentAddress)
+        if (!this.selectedVisible())
+            this.currentAddress = this.selectedAddress & 0xfffc
+
+        this.posInput.value = formatVal(this.selectedAddress)
         let from = this.currentAddress
         from += this.minRow * 4
         from &= 0xffff
@@ -112,23 +138,26 @@ class CpuMemoryView {
             e.innerText = formatVal(from + i * 4)
         })
 
-        let regs = this.app.exec.get_registers();
+        let regs = this.app.exec.get_registers()
 
         this.memoryInputs.forEach((e, i) => {
-            e.value = formatVal(memory[i])
-            let pos = (from + i) & 0xffff;
-            let color = '';
-            if(pos == regs.pc) {
-              color = `rgba(255, 128, 0, 0.2)`
-            } else if(pos == regs.sp) {
-              color = `rgba(255, 0, 128, 0.2)`
-            } else if(pos == regs.lp) {
-              color = `rgba(0, 192, 192, 0.2)`
+            let pos = (from + i) & 0xffff
+            if (pos == this.selectedAddress && this.el.contains(document.activeElement)) {
+                e.focus()
             }
-            
-            e.style.backgroundColor = color;
-            if(e.parentElement)
-              e.parentElement.style.backgroundColor = color;
+
+            e.value = formatVal(memory[i])
+            let color = ''
+            if (pos == regs.pc) {
+                color = `rgba(255, 128, 0, 0.2)`
+            } else if (pos == regs.sp) {
+                color = `rgba(255, 0, 128, 0.2)`
+            } else if (pos == regs.lp) {
+                color = `rgba(0, 192, 192, 0.2)`
+            }
+
+            e.style.backgroundColor = color
+            if (e.parentElement) e.parentElement.style.backgroundColor = color
         })
     }
 

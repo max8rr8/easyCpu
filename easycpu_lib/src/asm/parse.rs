@@ -152,7 +152,7 @@ impl<'a> AsmParse<'a> {
         parser.pos = start_pos;
 
         let mut subparser = AsmParse {
-            reader: ParseReader::from(&mut combined),
+            reader: parser,
             atoms: Vec::new(),
             modifier: Modifier::Scope,
         };
