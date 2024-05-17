@@ -9,6 +9,7 @@
 #include "verilated.h"
 #include "instruction.h"
 
+
 #define RAM_SIZE 65535
 
 unsigned short RAM[RAM_SIZE + 1] = {0};
@@ -20,20 +21,20 @@ void print_ram(int rows, int start)
 
   for (int i = 0; i < rows; i++)
   {
-    printf("%04x %04x %04x %04x\n", RAM[start + cur_idx], RAM[start + cur_idx + 1], RAM[start + cur_idx + 2], RAM[start + cur_idx + 3]);
+    fprintf(stderr, "%04x %04x %04x %04x\n", RAM[start + cur_idx], RAM[start + cur_idx + 1], RAM[start + cur_idx + 2], RAM[start + cur_idx + 3]);
     cur_idx += 4;
   }
 }
 
 void signal_handler(int signal_num)
 {
-  printf("Recieved int, halting\n");
+  fprintf(stderr, "Recieved int, halting\n");
       should_stop = true;
 }
 
 int main(int argc, char **argv, char **env)
 {
-  printf("Loding initial RAM from ram.bin:\n");
+  fprintf(stderr, "Loding initial RAM from ram.bin:\n");
   FILE *f = fopen("./ram.bin", "rb");
   fread(RAM, sizeof(unsigned short), RAM_SIZE, f);
   for (int i = 0; i < RAM_SIZE; i++)
@@ -49,7 +50,7 @@ int main(int argc, char **argv, char **env)
   Vour *top = new Vour{contextp};
 
   bool prev_par_signal = false;
-  printf("\nStarted cpu\n\n");
+  fprintf(stderr,"\nStarted cpu\n\n");
 
   unsigned short to_send = 0;
   unsigned short left_to_send = 0;
@@ -73,7 +74,7 @@ int main(int argc, char **argv, char **env)
     auto ram_addr = top->phy_ram_addr;
     if (ram_addr >= (sizeof(RAM) / sizeof(RAM[0])))
     {
-      printf("Invalid RAM address\n");
+      fprintf(stderr, "Invalid RAM address\n");
       break;
     }
 
@@ -90,7 +91,7 @@ int main(int argc, char **argv, char **env)
 
     if (top->halt_out)
     {
-      printf("\nCpu HALTed\n\n");
+      fprintf(stderr,"\nCpu HALTed\n\n");
       break;
     }
     if (should_stop)
@@ -125,7 +126,6 @@ int main(int argc, char **argv, char **env)
         {
           left_to_read--;
           to_send = getchar();
-          // printf("Sending %d\n", to_send);
           left_to_send = 7;
           serial_state = 16;
         }
@@ -177,10 +177,10 @@ int main(int argc, char **argv, char **env)
     // usleep(100000);
   }
 
-  printf("Program ram after HALT:\n");
+  fprintf(stderr, "Program ram after HALT:\n");
   print_ram(4, 0);
 
-  printf("\nStack after HALT:\n");
+  fprintf(stderr, "\nStack after HALT:\n");
   print_ram(8, 0x4000);
 
   delete top;

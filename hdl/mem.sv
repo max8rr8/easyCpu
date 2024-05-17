@@ -152,7 +152,7 @@ module mem(
           endcase
         end
           // case(ram_addr[7:0])
-          //   8'b0000_0000: begin
+           //   8'b0000_0000: begin
           //     serial_output_port <= ram_write[7:0];
           //   end
 
@@ -164,7 +164,6 @@ module mem(
           // endcase
 
         4'b1111: begin
-          $display("HALT");
            if(ram_addr[7:0] == 8'b1111_1111) begin
               keep_running <= ram_write[0];
             end

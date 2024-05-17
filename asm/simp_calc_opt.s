@@ -379,11 +379,8 @@ MAIN: @STACKOPT {
   $CALL PRINT_STRING ($PLABEL GOODBYE)
 
   # Wait a little
-  $PUZX; $DROP;
-  $PUZX; $DROP;
-  $PUZX; $DROP;
-  $PUZX; $DROP;
-
+  $PCONST 80
+  LOOP: $DEC; $DUP; $JGT LOOP
 }
 HALT
 
