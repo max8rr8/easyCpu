@@ -18,8 +18,12 @@ impl TestGroup {
         Test::new(name.clone(), TestGroup { name, tests })
     }
 
-    pub fn add(&mut self, name: impl Into<String>, test: impl Testable + 'static) {
+    pub fn add_from_testable(&mut self, name: impl Into<String>, test: impl Testable + 'static) {
         self.tests.push(Test::new(name.into(), test));
+    }
+
+    pub fn add(&mut self, test: Test) {
+        self.tests.push(test);
     }
 }
 
@@ -32,7 +36,7 @@ impl From<TestGroup> for Test {
 impl Testable for TestGroup {
     fn run(&self, ctx: &TestContext) -> Result<(), super::TestError> {
         let log = ctx.log.create_nested("::");
-        
+
         let mut had_error = false;
         for test in &self.tests {
             had_error |= test.run(&log).is_err();

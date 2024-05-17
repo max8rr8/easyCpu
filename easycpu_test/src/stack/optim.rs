@@ -1,9 +1,9 @@
-use crate::runner::{ExecCond, StackOptExec, Test, TestGroup};
+use crate::runner::{test, ExecCond, StackOptExec, Test, TestGroup};
 
 pub fn optim_simpl() -> Test {
     let mut g = TestGroup::new("optim_simple");
 
-    g.add(
+    g.add(test!(
         "drop_test",
         StackOptExec::new(
             "$PCONST 123
@@ -12,14 +12,13 @@ pub fn optim_simpl() -> Test {
         $DROP
         ",
             vec![ExecCond::CheckStack(vec![])],
-        ),
-    );
+        )
+    ));
 
-
-    g.add(
-      "plabel_shift",
-      StackOptExec::new(
-          "$PLABEL DATA
+    g.add(test!(
+        "plabel_shift",
+        StackOptExec::new(
+            "$PLABEL DATA
       $PCONST 2
       $ADD
       $ACONST 1
@@ -28,9 +27,9 @@ pub fn optim_simpl() -> Test {
       DATA: 1 2 3 4 5 6  
       {
       ",
-          vec![ExecCond::CheckStack(vec![4])],
-      ),
-  );
+            vec![ExecCond::CheckStack(vec![4])],
+        )
+    ));
 
     g.into()
 }

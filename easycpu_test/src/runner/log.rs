@@ -19,6 +19,7 @@ pub struct PerformanceLog {
 #[derive(Debug, Clone)]
 pub struct Logger {
     pub name: String,
+    pub position: String,
     pub performance: Arc<Mutex<Vec<(String, PerformanceLog)>>>,
 }
 
@@ -31,6 +32,7 @@ impl Logger {
     pub fn new() -> Self {
         Self {
             name: String::from(""),
+            position: String::from(""),
             performance: Arc::new(Mutex::new(Vec::new())),
         }
     }
@@ -39,11 +41,13 @@ impl Logger {
         if let TestError::Elevating = err {
             println!("{RED_COLOR}[ FAILED ] {}{RESET_COLOR}", self.name,);
         } else {
-            println!(
-                "{RED_COLOR}[ FAILED ] {}{RESET_COLOR}\n{}\n\n",
-                self.name,
-                err.to_string()
-            );
+            println!("{RED_COLOR}[ FAILED ] {}{RESET_COLOR}", self.name);
+
+            if !self.position.is_empty() {
+                println!("Test at {}", self.position);
+            }
+
+            println!("{}\n", err.to_string());
         }
     }
 
@@ -63,5 +67,10 @@ impl Logger {
             name: self.name.clone() + name,
             ..self.clone()
         }
+    }
+
+    pub fn with_position(mut self, position: impl AsRef<str>) -> Self {
+        self.position = position.as_ref().to_string();
+        self
     }
 }

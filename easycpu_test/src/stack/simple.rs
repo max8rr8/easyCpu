@@ -1,14 +1,14 @@
-use crate::runner::{ExecCond, StackOptExec, Test, TestGroup};
+use crate::runner::{test, ExecCond, StackOptExec, Test, TestGroup};
 
 pub fn simple() -> Test {
     let mut g = TestGroup::new("simple");
 
-    g.add(
+    g.add(test!(
         "puzx",
-        StackOptExec::new("$PUZX", vec![ExecCond::CheckStack(vec![0])]),
-    );
+        StackOptExec::new("$PUZX", vec![ExecCond::CheckStack(vec![0])])
+    ));
 
-    g.add(
+    g.add(test!(
         "supdup",
         StackOptExec::new(
             "$DUP; $DUP; $DUP; $DUP; $DUP; $DUP; $DUP",
@@ -18,10 +18,10 @@ pub fn simple() -> Test {
                     0x1234, 0x1234, 0x1234, 0x1234, 0x1234, 0x1234, 0x1234, 0x1234,
                 ]),
             ],
-        ),
-    );
+        )
+    ));
 
-    g.add(
+    g.add(test!(
         "simpexpr",
         StackOptExec::new(
             "$AND; $PCONST 14; $PCONST 3; $SUB; $ADD",
@@ -29,10 +29,10 @@ pub fn simple() -> Test {
                 ExecCond::SetStack(vec![0x10, 0x12]),
                 ExecCond::CheckStack(vec![0x1b]),
             ],
-        ),
-    );
+        )
+    ));
 
-    g.add(
+    g.add(test!(
         "condcalc",
         StackOptExec::new(
             "$JEQ DO_ADD 
@@ -48,10 +48,10 @@ pub fn simple() -> Test {
         .add_case(vec![
             ExecCond::SetStack(vec![0x14, 0x13, 0x0]),
             ExecCond::CheckStack(vec![0x27]),
-        ]),
-    );
+        ])
+    ));
 
-    g.add(
+    g.add(test!(
         "trickyjump",
         StackOptExec::new(
             "$PCONST 0x20
@@ -67,10 +67,10 @@ pub fn simple() -> Test {
                 ExecCond::SetStack(vec![0x10]),
                 ExecCond::CheckStack(vec![0x30]),
             ],
-        ),
-    );
+        )
+    ));
 
-    g.add(
+    g.add(test!(
         "peeker",
         StackOptExec::new(
             "$PCONST 0x30
@@ -85,10 +85,10 @@ pub fn simple() -> Test {
                 ExecCond::SetStack(vec![0x10, 0x20]),
                 ExecCond::CheckStack(vec![0x10, 0x20, 0x30, 0x40, 0x40, 0x30, 0x20, 0x10]),
             ],
-        ),
-    );
+        )
+    ));
 
-    g.add(
+    g.add(test!(
         "fibonaci",
         StackOptExec::new(
             "$PCONST 0
@@ -101,10 +101,10 @@ pub fn simple() -> Test {
             $PEEK 2; $PEEK 2; $ADD
             ",
             vec![ExecCond::CheckStack(vec![0, 1, 1, 2, 3, 5, 8, 13])],
-        ),
-    );
+        )
+    ));
 
-    g.add(
+    g.add(test!(
         "formnum",
         StackOptExec::new(
             "$DUP
@@ -140,10 +140,10 @@ pub fn simple() -> Test {
         .add_case(vec![
             ExecCond::SetStack(vec![0xc4]),
             ExecCond::CheckStack(vec![0x63, 0x34]),
-        ]),
-    );
+        ])
+    ));
 
-    g.add(
+    g.add(test!(
         "parsedigit",
         StackOptExec::new(
             "
@@ -197,10 +197,10 @@ pub fn simple() -> Test {
         .add_case(vec![
             ExecCond::SetStack(vec![0x44]),
             ExecCond::CheckStack(vec![0xd]),
-        ]),
-    );
+        ])
+    ));
 
-    g.add(
+    g.add(test!(
         "dropmulti",
         StackOptExec::new(
             "$DROP 5",
@@ -208,8 +208,8 @@ pub fn simple() -> Test {
                 ExecCond::SetStack(vec![0x10, 0x11, 0x12, 0x13, 0x14, 0x15]),
                 ExecCond::CheckStack(vec![0x10]),
             ],
-        ),
-    );
+        )
+    ));
 
     g.into()
 }
@@ -217,8 +217,7 @@ pub fn simple() -> Test {
 pub fn funcs() -> Test {
     let mut g = TestGroup::new("func");
 
-
-    g.add(
+    g.add(test!(
         "simple",
         StackOptExec::new(
             "
@@ -243,11 +242,10 @@ pub fn funcs() -> Test {
                 ExecCond::SetStack(vec![0x10]),
                 ExecCond::CheckStack(vec![0x15]),
             ],
-        ),
-    );
+        )
+    ));
 
-
-    g.add(
+    g.add(test!(
         "execute_op",
         StackOptExec::new(
             "
@@ -286,11 +284,12 @@ pub fn funcs() -> Test {
                 ExecCond::SetStack(vec![0x1, 0x10, 0x20]),
                 ExecCond::CheckStack(vec![0x30]),
             ],
-        ).add_case(vec![
+        )
+        .add_case(vec![
             ExecCond::SetStack(vec![0x2, 0x20, 0x0f]),
             ExecCond::CheckStack(vec![0x11]),
-        ],),
-    );
+        ],)
+    ));
 
     g.into()
 }
